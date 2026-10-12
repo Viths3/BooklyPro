@@ -1,3 +1,6 @@
+import { AppointmentRepository } from './repositories/appointment.repository.js';
+import { AppointmentService } from './services/appointment.service.js';
+import { createAppointmentRouter } from './routes/appointment.routes.js';
 import { AvailabilityRepository } from './repositories/availability.repository.js';
 import { AvailabilityService } from './services/availability.service.js';
 import { createAvailabilityRouter } from './routes/availability.routes.js';
@@ -22,13 +25,16 @@ import { prisma, checkDatabase } from './config/prisma.js';
 
 const auth = new AuthService(new AuthRepository(prisma));
 const businesses = new BusinessService(new BusinessRepository(prisma));
+const availability = new AvailabilityService(
+  new AvailabilityRepository(prisma),
+  env.AVAILABILITY_SLOT_INTERVAL_MINUTES,
+);
 const app = createApp(checkDatabase, {
   auth: createAuthRouter(auth),
-  availability: createAvailabilityRouter(
-    new AvailabilityService(
-      new AvailabilityRepository(prisma),
-      env.AVAILABILITY_SLOT_INTERVAL_MINUTES,
-    ),
+  availability: createAvailabilityRouter(availability),
+  appointments: createAppointmentRouter(
+    new AppointmentService(new AppointmentRepository(prisma), availability),
+    auth,
   ),
   schedules: createScheduleRouter(
     new ScheduleService(new ScheduleRepository(prisma)),
