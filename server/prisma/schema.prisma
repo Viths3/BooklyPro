@@ -11,6 +11,17 @@ datasource db {
 enum Role {
   CUSTOMER
   BUSINESS_OWNER
+  ADMIN
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
 }
 
 enum AppointmentStatus {
@@ -43,6 +54,7 @@ model Business {
   description  String?
   phone        String?            @db.VarChar(30)
   address      String?
+  active       Boolean            @default(true)
   imageUrl     String?
   timeZone     String             @default("America/Guayaquil") @db.VarChar(100)
   currency     String             @default("USD") @db.Char(3)
@@ -56,6 +68,7 @@ model Business {
   reviews      Review[]
 
   @@index([ownerId])
+  @@index([active, name])
 }
 
 model Employee {
@@ -107,27 +120,31 @@ model EmployeeService {
   @@index([employeeId, businessId])
 }
 
-// 0 = domingo, 6 = sabado. Minutos locales [0, 1440]. Un intervalo por dia.
+// Minutos locales [0, 1440]. Un intervalo por dia, sin cruzar medianoche.
 model BusinessSchedule {
-  id          String   @id @default(uuid()) @db.Uuid
-  businessId  String   @db.Uuid
-  dayOfWeek   Int
+  id          String    @id @default(uuid()) @db.Uuid
+  businessId  String    @db.Uuid
+  dayOfWeek   DayOfWeek
   openingTime Int
   closingTime Int
-  active      Boolean  @default(true)
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@unique([businessId, dayOfWeek])
 }
 
 model EmployeeSchedule {
-  id          String   @id @default(uuid()) @db.Uuid
-  employeeId  String   @db.Uuid
-  dayOfWeek   Int
-  openingTime Int
-  closingTime Int
-  active      Boolean  @default(true)
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid()) @db.Uuid
+  employeeId String    @db.Uuid
+  dayOfWeek  DayOfWeek
+  startTime  Int
+  endTime    Int
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, dayOfWeek])
 }
@@ -154,6 +171,9 @@ model Appointment {
 
   @@unique([id, customerId, businessId])
   @@index([customerId, startTime])
+  @@index([employeeId, startTime])
+  @@index([status, startTime])
+  @@index([startTime])
   @@index([businessId, startTime])
   @@index([employeeId, businessId])
   @@index([serviceId, businessId])
@@ -167,6 +187,7 @@ model Review {
   rating        Int
   comment       String?
   createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime    @updatedAt @db.Timestamptz(3)
   customer      User        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   business      Business    @relation(fields: [businessId], references: [id], onDelete: Restrict)
   appointment   Appointment @relation(fields: [appointmentId, customerId, businessId], references: [id, customerId, businessId], onDelete: Restrict)
