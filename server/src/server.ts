@@ -1,3 +1,6 @@
+import { ScheduleRepository } from './repositories/schedule.repository.js';
+import { ScheduleService } from './services/schedule.service.js';
+import { createScheduleRouter } from './routes/schedule.routes.js';
 import { EmployeeRepository } from './repositories/employee.repository.js';
 import { EmployeeService } from './services/employee.service.js';
 import { createEmployeeRouter } from './routes/employee.routes.js';
@@ -18,6 +21,10 @@ const auth = new AuthService(new AuthRepository(prisma));
 const businesses = new BusinessService(new BusinessRepository(prisma));
 const app = createApp(checkDatabase, {
   auth: createAuthRouter(auth),
+  schedules: createScheduleRouter(
+    new ScheduleService(new ScheduleRepository(prisma)),
+    auth,
+  ),
   employees: createEmployeeRouter(
     new EmployeeService(new EmployeeRepository(prisma)),
     auth,
