@@ -1,3 +1,4 @@
+import { minutesToTime as time } from '../utils/time.js';
 import type { ScheduleRepository } from '../repositories/schedule.repository.js';
 import {
   weekDays,
@@ -8,13 +9,7 @@ import {
 import type { DayOfWeek } from '../generated/prisma/enums.js';
 import { assertBusinessOwner } from '../utils/business-access.js';
 import { AppError } from '../utils/app-error.js';
-function time(value: number) {
-  return (
-    String(Math.floor(value / 60)).padStart(2, '0') +
-    ':' +
-    String(value % 60).padStart(2, '0')
-  );
-}
+
 function response(kind: ScheduleKind, schedules: ScheduleInput[]) {
   return [...schedules]
     .sort(
