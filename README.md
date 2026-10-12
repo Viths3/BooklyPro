@@ -660,6 +660,72 @@ Invoke-RestMethod "$api/appointments/$appointmentId/cancel" -Method Patch -Heade
 
 La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas. No se inicia feature/reviews.
 
+## Reseñas
+
+| Método | Ruta                                      | Acceso                          |
+| ------ | ----------------------------------------- | ------------------------------- |
+| POST   | `/api/appointments/:appointmentId/review` | Cliente autenticado de esa cita |
+| GET    | `/api/businesses/:businessId/reviews`     | Público                         |
+| GET    | `/api/reviews/:id`                        | Público                         |
+
+Solo una cita `COMPLETED` puede recibir una reseña, y solo una por cita. Una cita
+ajena devuelve `403 FORBIDDEN`, sin bypass para propietario ni ADMIN. Los estados
+`PENDING`, `CONFIRMED`, `CANCELLED` y `NO_SHOW` devuelven
+`409 APPOINTMENT_NOT_REVIEWABLE`. El estado COMPLETED es terminal en la API.
+Las citas completadas pueden reseñarse aunque el negocio se desactive; sus reseñas
+siguen siendo públicas como historial. No se requiere que el negocio esté activo.
+
+Ejemplo de body (sin IDs ni campos internos):
+
+```json
+{ "rating": 5, "comment": "Excelente atención" }
+```
+
+`rating` es un número entero obligatorio entre 1 y 5, sin coerción desde texto.
+`comment` es un string opcional, con trim y máximo 1000 caracteres después del
+trim; omitido o vacío se guarda como `null`. El body no acepta `null` explícito ni
+otros tipos para comment. El servidor toma customerId de la sesión y businessId de
+la cita, y devuelve `201 { data: { id, rating, comment, createdAt } }` con Location.
+
+El listado acepta `page` (1 por defecto, máximo 1000000) y `limit` (20 por defecto,
+máximo 100), ambos enteros positivos. Ordena por `createdAt DESC, id DESC` para
+desempatar de forma estable. Una página fuera de rango devuelve data vacío sin
+perder el total ni el summary. El promedio se calcula con aggregate de Prisma sobre
+**todas** las reseñas del negocio, redondeado a un decimal; no se guarda en Business.
+JSON puede representar `5.0` como `5`. Sin reseñas, averageRating es `null`.
+
+```json
+{
+  "data": [
+    {
+      "id": "UUID",
+      "rating": 5,
+      "comment": "Excelente atención",
+      "createdAt": "2026-10-12T20:00:00.000Z",
+      "customer": { "firstName": "Juan" }
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 },
+  "summary": { "averageRating": 5, "totalReviews": 1 }
+}
+```
+
+El detalle individual añade únicamente `business: { id, name }` a los campos
+públicos del listado. No se exponen customerId, appointmentId, apellidos, email,
+teléfono, credenciales ni relaciones privadas. Un negocio inexistente devuelve
+`404 BUSINESS_NOT_FOUND`; una reseña inexistente, `404 REVIEW_NOT_FOUND`.
+
+La aplicación comprueba duplicados antes de insertar; la restricción UNIQUE
+existente sobre Review.appointmentId impide también duplicados concurrentes.
+Ambos casos devuelven `409 REVIEW_ALREADY_EXISTS` sin códigos Prisma/SQL internos.
+La FK compuesta existente exige que cita, cliente y negocio coincidan. No se
+modificaron el schema ni las cuatro migraciones. Listado, existencia del negocio
+y aggregate se leen en una transacción RepeatableRead para compartir snapshot.
+
+Las pruebas de `server/test/integration/review.test.ts` se ejecutan automáticamente
+con `npm run test:integration` y en CI, sobre una base temporal PostgreSQL local.
+Esta feature no añade edición, borrado ni moderación de reseñas.
+
 ## Deployment
 
 La [guía de despliegue en Railway](docs/deployment.md) documenta PostgreSQL remoto,
