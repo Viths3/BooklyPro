@@ -173,3 +173,46 @@ Ajustar usuario/base si cambiaste el entorno. Las fixtures se ejecutan dentro de
 ### Avisos de dependencias
 
 La revisión inicial con `npm audit` detectó cuatro entradas de severidad alta en el árbol de Prisma 7.10.0 (`prisma`, `@prisma/config`, `deepmerge-ts` y `mysql2`); también aparecen con `--omit=dev` por las relaciones de dependencias de Prisma. MySQL no se utiliza en esta aplicación. La corrección automática propuesta implica bajar a Prisma 6, incompatible con esta configuración; no se aplicó `audit fix --force`. Revisar actualizaciones compatibles antes de un despliegue público. Esta base es de desarrollo y no implementa aún los controles de autenticación de la Fase 2.
+
+## Flujo de ramas
+
+Repositorio: https://github.com/Viths3/BooklyPro.git. Las instrucciones permanentes estan en [AGENTS.md](AGENTS.md).
+
+- `main`: versiones estables integradas desde `develop`.
+- `develop`: rama de integracion y base de nuevas funcionalidades.
+- `feature/*`: una funcionalidad o tarea importante por rama.
+
+```sh
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/nombre-de-la-funcionalidad
+# Implementar, comprobar y hacer commits descriptivos.
+git status
+git diff
+git diff --cached
+git push -u origin feature/nombre-de-la-funcionalidad
+git switch develop
+git pull --ff-only origin develop
+git merge --no-ff feature/nombre-de-la-funcionalidad
+git push origin develop
+```
+
+Al completar una fase estable y comprobada:
+
+```sh
+git switch main
+git pull --ff-only origin main
+git merge --no-ff develop
+git push origin main
+git switch develop
+```
+
+No desarrollar directamente en `main`, no usar force push y no borrar ramas con trabajo sin integrar. Si hay conflictos, resolverlos conservando los cambios pertinentes y repetir las verificaciones antes de publicar. Una feature integrada puede eliminarse con `git branch -d feature/nombre` y, despues de comprobar su integracion remota, `git push origin --delete feature/nombre`.
+
+La Fase 1 se implemento antes de existir historial Git. Su registro inicial se separo por responsabilidad en `feature/project-setup`, `feature/database-setup`, `feature/prisma-schema` y `feature/health-endpoint`; no representa desarrollo historico previo. `feature/git-workflow` agrega estas reglas y finales de linea consistentes entre Windows y Linux. El commit raiz vacio es solo el punto de partida de `main`. La promocion de esta fase a `main` queda pendiente de revisar los avisos de dependencias documentados arriba.
+
+Para inspeccionar la evolucion:
+
+```sh
+git log --graph --oneline --decorate --all
+```
