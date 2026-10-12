@@ -1,0 +1,50 @@
+name: Backend checks
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://booklypro:booklypro_local@localhost:5432/booklypro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.2'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run db:validate
+      - run: npm run build
+      - run: npm test
+      - name: Start disposable local PostgreSQL
+        run: |
+          cp .env.example .env
+          docker compose up -d --wait
+      - run: npm run test:integration
+      - run: npm run db:deploy
+      - run: npm run test:smoke -w server
+      - name: Verify isolated Railway directory
+        run: |
+          mkdir "$RUNNER_TEMP/booklypro-api"
+          cp -r server/. "$RUNNER_TEMP/booklypro-api/"
+          cd "$RUNNER_TEMP/booklypro-api"
+          npm ci --include=dev
+          npm run build
+          npm test
+          npm run test:smoke
+      - if: always()
+        run: docker compose down -v

@@ -1,0 +1,213 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  BUSINESS_OWNER
+  ADMIN
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique @db.VarChar(254)
+  passwordHash  String
+  firstName     String         @db.VarChar(100)
+  lastName      String         @db.VarChar(100)
+  role          Role           @default(CUSTOMER)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
+  businesses    Business[]
+  appointments  Appointment[]
+  reviews       Review[]
+  refreshTokens RefreshToken[]
+}
+
+model Business {
+  id           String             @id @default(uuid()) @db.Uuid
+  ownerId      String             @db.Uuid
+  name         String             @db.VarChar(150)
+  description  String?
+  phone        String?            @db.VarChar(30)
+  address      String?
+  active       Boolean            @default(true)
+  imageUrl     String?
+  timeZone     String             @default("America/Guayaquil") @db.VarChar(100)
+  currency     String             @default("USD") @db.Char(3)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+  owner        User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  employees    Employee[]
+  services     Service[]
+  schedules    BusinessSchedule[]
+  appointments Appointment[]
+  reviews      Review[]
+
+  @@index([ownerId])
+  @@index([active, name])
+}
+
+model Employee {
+  id           String             @id @default(uuid()) @db.Uuid
+  businessId   String             @db.Uuid
+  firstName    String             @db.VarChar(100)
+  lastName     String             @db.VarChar(100)
+  email        String?            @db.VarChar(254)
+  phone        String?            @db.VarChar(30)
+  active       Boolean            @default(true)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+  business     Business           @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  services     EmployeeService[]
+  schedules    EmployeeSchedule[]
+  appointments Appointment[]
+
+  @@unique([id, businessId])
+  @@index([businessId, active])
+}
+
+model Service {
+  id              String            @id @default(uuid()) @db.Uuid
+  businessId      String            @db.Uuid
+  name            String            @db.VarChar(150)
+  description     String?
+  price           Decimal           @db.Decimal(12, 2)
+  durationMinutes Int
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @db.Timestamptz(3)
+  business        Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  employees       EmployeeService[]
+  appointments    Appointment[]
+
+  @@unique([id, businessId])
+  @@index([businessId, active])
+}
+
+model EmployeeService {
+  employeeId String   @db.Uuid
+  serviceId  String   @db.Uuid
+  businessId String   @db.Uuid
+  employee   Employee @relation(fields: [employeeId, businessId], references: [id, businessId], onDelete: Restrict)
+  service    Service  @relation(fields: [serviceId, businessId], references: [id, businessId], onDelete: Restrict)
+
+  @@id([employeeId, serviceId])
+  @@index([serviceId, businessId])
+  @@index([employeeId, businessId])
+}
+
+// Minutos locales [0, 1440]. Un intervalo por dia, sin cruzar medianoche.
+model BusinessSchedule {
+  id          String    @id @default(uuid()) @db.Uuid
+  businessId  String    @db.Uuid
+  dayOfWeek   DayOfWeek
+  openingTime Int
+  closingTime Int
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, dayOfWeek])
+}
+
+model EmployeeSchedule {
+  id         String    @id @default(uuid()) @db.Uuid
+  employeeId String    @db.Uuid
+  dayOfWeek  DayOfWeek
+  startTime  Int
+  endTime    Int
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, dayOfWeek])
+}
+
+model Appointment {
+  id             String            @id @default(uuid()) @db.Uuid
+  customerId     String            @db.Uuid
+  businessId     String            @db.Uuid
+  employeeId     String            @db.Uuid
+  serviceId      String            @db.Uuid
+  startTime      DateTime          @db.Timestamptz(3)
+  endTime        DateTime          @db.Timestamptz(3)
+  // Precio acordado: no cambia cuando se actualiza el catalogo.
+  priceAtBooking Decimal           @db.Decimal(12, 2)
+  status         AppointmentStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+  customer       User              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  business       Business          @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  employee       Employee          @relation(fields: [employeeId, businessId], references: [id, businessId], onDelete: Restrict)
+  service        Service           @relation(fields: [serviceId, businessId], references: [id, businessId], onDelete: Restrict)
+  review         Review?
+
+  @@unique([id, customerId, businessId])
+  @@index([customerId, startTime])
+  @@index([employeeId, startTime])
+  @@index([status, startTime])
+  @@index([startTime])
+  @@index([businessId, startTime])
+  @@index([employeeId, businessId])
+  @@index([serviceId, businessId])
+}
+
+model Review {
+  id            String      @id @default(uuid()) @db.Uuid
+  customerId    String      @db.Uuid
+  businessId    String      @db.Uuid
+  appointmentId String      @unique @db.Uuid
+  rating        Int
+  comment       String?
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime    @updatedAt @db.Timestamptz(3)
+  customer      User        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  appointment   Appointment @relation(fields: [appointmentId, customerId, businessId], references: [id, customerId, businessId], onDelete: Restrict)
+
+  @@unique([appointmentId, customerId, businessId])
+  @@index([customerId])
+  @@index([businessId, createdAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique @db.Char(64)
+  familyId  String    @db.Uuid
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+}
