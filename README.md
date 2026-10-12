@@ -659,3 +659,11 @@ Invoke-RestMethod "$api/appointments/$appointmentId/cancel" -Method Patch -Heade
 ```
 
 La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas. No se inicia feature/reviews.
+
+## Deployment
+
+La [guía de despliegue en Railway](docs/deployment.md) documenta PostgreSQL remoto,
+Root Directory `/server`, variables, CORS, migraciones en pre-deploy y health checks.
+El servicio despliega desde `main` después de CI; Docker continúa siendo la base
+local. La configuración está en `server/railway.json` y el pipeline en
+`.github/workflows/backend.yml`. No se ejecutan seeds en producción.
