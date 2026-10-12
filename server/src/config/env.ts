@@ -6,6 +6,12 @@ const environmentSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  AVAILABILITY_SLOT_INTERVAL_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .default(15),
   DATABASE_URL: z.url().refine((value) => /^postgres(ql)?:\/\//.test(value)),
 });
 
