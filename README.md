@@ -1,250 +1,195 @@
 ﻿# BooklyPro
 
-Plataforma SaaS de reservas para pequeños negocios: barberías, consultorios, talleres y salones. Proyecto de portafolio desarrollado por fases.
+Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como proyecto Full Stack de portafolio.
 
-## Estado: Fase 1
+## Estado actual
 
-Base del backend, modelo relacional completo, primera migración PostgreSQL y `GET /api/health`. No hay autenticación, CRUD de negocios, motor de reservas ni frontend todavía.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. No hay frontend ni CRUD de negocios o reservas todavia.
 
-## Stack
+Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
-Implementado: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7 con adaptador PostgreSQL, PostgreSQL 17, Zod, ESLint, Prettier, npm workspaces y Docker Compose.
+## Requisitos e instalacion
 
-Futuro: React, Vite, Tailwind CSS, React Router, TanStack Query, React Hook Form y Zod; JWT y refresh tokens para autenticación. No se usa MongoDB.
+- Node.js 22.13 o superior y npm 10+.
+- Docker Desktop iniciado, con contenedores Linux y Docker Compose.
+- Git y puertos 3000/5432 disponibles.
 
-## Requisitos
-
-- Node.js 22.13 o superior (recomendado: Node 22 LTS) y npm 10+.
-- Docker Desktop en ejecución, con contenedores Linux y Docker Compose.
-- Git.
-- Puertos 3000 (API) y 5432 (PostgreSQL) disponibles.
-
-## Instalación y ejecución
-
-Desde la raíz, en PowerShell:
+Desde PowerShell:
 
 ```powershell
+git clone --branch develop https://github.com/Viths3/BooklyPro.git
+cd BooklyPro
 Copy-Item .env.example .env
 Copy-Item server/.env.example server/.env
 npm ci
+```
+
+Si los archivos `.env` ya existen, conservarlos. En Bash, usar `cp` en lugar de `Copy-Item`. Configurar dos secretos JWT diferentes en `server/.env`; generar cada valor ejecutando por separado:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+```
+
+Copiar cada resultado en la variable correspondiente y no compartirlo ni versionarlo. Los campos de secretos en `.env.example` estan vacios intencionalmente.
+
+```sh
 docker compose up -d --wait
 npm run db:generate
+npm run db:deploy
 npm run dev
 ```
 
-En Bash, usar `cp` en lugar de `Copy-Item`. Si los archivos `.env` ya existen, conservar sus valores. Las credenciales de ejemplo son exclusivamente locales. Si cambias usuario, contraseña, puerto o base de datos, actualiza también `server/.env`.
-
-```powershell
-Invoke-RestMethod http://localhost:3000/api/health
-```
-
-Respuesta:
-
-```json
-{ "status": "ok", "service": "booklypro-api", "database": "connected" }
-```
-
-Es un endpoint de liveness: comprueba que el proceso HTTP responde, no consulta PostgreSQL en cada petición. El servidor sí exige conexión a PostgreSQL durante el arranque.
-
-Para compilar y ejecutar el JavaScript generado:
+`predev` genera el cliente Prisma automaticamente. Para ejecutar desde `server/`, usar `npm install` y `npm run dev` tras configurar los entornos y aplicar las migraciones. Se recomienda `npm ci` desde la raiz para instalaciones reproducibles.
 
 ```sh
 npm run build
 npm start
 ```
 
-Para detener PostgreSQL sin perder datos: `docker compose down`. Los datos permanecen en un volumen; cambiar las variables de inicialización no cambia las credenciales de un volumen ya creado.
-
 ## Variables de entorno
 
-| Archivo       | Variable            | Uso / ejemplo                                                     |
-| ------------- | ------------------- | ----------------------------------------------------------------- |
-| `.env`        | `POSTGRES_USER`     | Usuario local: `booklypro`                                        |
-| `.env`        | `POSTGRES_PASSWORD` | Contraseña local; debe coincidir con DATABASE_URL                 |
-| `.env`        | `POSTGRES_DB`       | Base local: `booklypro`                                           |
-| `.env`        | `POSTGRES_PORT`     | Puerto expuesto: `5432`                                           |
-| `server/.env` | `DATABASE_URL`      | `postgresql://booklypro:booklypro_local@localhost:5432/booklypro` |
-| `server/.env` | `NODE_ENV`          | `development`, `test` o `production`                              |
-| `server/.env` | `PORT`              | Puerto HTTP: `3000`                                               |
+| Archivo       | Variable                 | Uso                                                              |
+| ------------- | ------------------------ | ---------------------------------------------------------------- |
+| `.env`        | `POSTGRES_USER`          | Usuario local, por defecto `booklypro`                           |
+| `.env`        | `POSTGRES_PASSWORD`      | Clave de desarrollo local                                        |
+| `.env`        | `POSTGRES_DB`            | Base local `booklypro`                                           |
+| `.env`        | `POSTGRES_PORT`          | Puerto local `5432`                                              |
+| `server/.env` | `DATABASE_URL`           | URL PostgreSQL; debe coincidir con las variables de Docker       |
+| `server/.env` | `NODE_ENV`               | `development`, `test` o `production`                             |
+| `server/.env` | `PORT`                   | Puerto HTTP, por defecto `3000`                                  |
+| `server/.env` | `JWT_ACCESS_SECRET`      | Secreto aleatorio de al menos 32 caracteres                      |
+| `server/.env` | `JWT_ACCESS_EXPIRES_IN`  | `15m` por defecto; maximo una hora                               |
+| `server/.env` | `JWT_REFRESH_SECRET`     | Secreto aleatorio distinto del de acceso, al menos 32 caracteres |
+| `server/.env` | `JWT_REFRESH_EXPIRES_IN` | `7d` por defecto; maximo 30 dias                                 |
 
-Zod valida la configuración al arrancar y no imprime credenciales si falla. Prisma CLI carga `server/.env` mediante `prisma.config.ts`. Los scripts del workspace se ejecutan desde `server/`.
+Las duraciones aceptan enteros positivos con sufijo `s`, `m`, `h` o `d`. Zod valida la configuracion sin imprimir sus valores. La autenticacion impide arrancar el servidor con secretos ausentes, cortos o iguales. Prisma y el seed solo requieren la configuracion de base de datos.
+
+Ejemplo local de `DATABASE_URL`: `postgresql://booklypro:booklypro_local@localhost:5432/booklypro`. Las credenciales de ejemplo son solo para desarrollo. Cambiar las variables de inicializacion no modifica las credenciales de un volumen PostgreSQL ya creado.
+
+## Infraestructura y health check
+
+```sh
+docker version
+docker compose ps
+docker compose exec postgres pg_isready -U booklypro -d booklypro
+```
+
+`GET http://localhost:3000/api/health` ejecuta `SELECT 1` mediante Prisma en cada peticion:
+
+```json
+{ "status": "ok", "service": "booklypro-api", "database": "connected" }
+```
+
+Devuelve HTTP 200 si PostgreSQL responde; en caso contrario HTTP 503 con `status: "error"` y `database: "disconnected"`, sin detalles internos. El servidor puede arrancar sin conexion a PostgreSQL para informar del fallo. El adaptador limita a tres segundos cada espera de conexion y consulta. No necesita tablas para ejecutar el health check.
+
+Para comprobar una caida local, mantener la API encendida, ejecutar `docker compose stop postgres` y consultar el endpoint; debe responder 503. Restaurar con `docker compose up -d --wait`; debe volver a responder 200. `docker compose down` detiene PostgreSQL sin borrar su volumen persistente.
+
+## Autenticacion
+
+| Metodo | Endpoint             | Resultado                                               |
+| ------ | -------------------- | ------------------------------------------------------- |
+| POST   | `/api/auth/register` | 201, usuario seguro con rol CUSTOMER; no crea sesion    |
+| POST   | `/api/auth/login`    | 200, usuario, access token y refresh token              |
+| POST   | `/api/auth/refresh`  | 200, nueva pareja de tokens; revoca el refresh anterior |
+| POST   | `/api/auth/logout`   | 204, revoca la familia de refresh tokens de esa sesion  |
+| GET    | `/api/auth/me`       | 200, usuario actual; requiere Bearer access token       |
+
+Registro acepta `firstName`, `lastName`, `email` y `password`; rechaza campos adicionales como `role`. Normaliza el email a minusculas y elimina espacios exteriores. Contrasena: minimo 12 caracteres y maximo 72 bytes UTF-8; no se recorta ni normaliza. bcrypt usa coste 12. El limite de bytes evita truncamiento silencioso de bcrypt.
+
+Login devuelve:
+
+```json
+{
+  "user": {
+    "id": "UUID",
+    "firstName": "Juan",
+    "lastName": "Guaman",
+    "email": "juan@example.com",
+    "role": "CUSTOMER"
+  },
+  "accessToken": "ACCESS_TOKEN",
+  "refreshToken": "REFRESH_TOKEN",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
+
+No se devuelven passwordHash, hashes de tokens ni datos de sesiones persistidas. Las respuestas de autenticacion y health usan `Cache-Control: no-store`.
+
+### Probar el flujo en PowerShell
+
+Con el servidor iniciado:
+
+```powershell
+$api = 'http://localhost:3000/api/auth'
+$registration = @{ firstName = 'Juan'; lastName = 'Guaman'; email = 'juan@example.com'; password = 'Password123!' } | ConvertTo-Json
+Invoke-RestMethod "$api/register" -Method Post -ContentType 'application/json' -Body $registration
+$credentials = @{ email = 'juan@example.com'; password = 'Password123!' } | ConvertTo-Json
+$session = Invoke-RestMethod "$api/login" -Method Post -ContentType 'application/json' -Body $credentials
+Invoke-RestMethod "$api/me" -Headers @{ Authorization = "Bearer $($session.accessToken)" }
+$refreshBody = @{ refreshToken = $session.refreshToken } | ConvertTo-Json
+$session = Invoke-RestMethod "$api/refresh" -Method Post -ContentType 'application/json' -Body $refreshBody
+$logoutBody = @{ refreshToken = $session.refreshToken } | ConvertTo-Json
+Invoke-RestMethod "$api/logout" -Method Post -ContentType 'application/json' -Body $logoutBody
+```
+
+`Password123!` es solo un ejemplo local. No utilizarlo en produccion. Guardar siempre el refresh nuevo: reutilizar el anterior se considera replay e invalida la familia. El segundo registro del mismo email devuelve 409.
+
+En Bash, curl permite el mismo flujo:
+
+```sh
+curl -X POST http://localhost:3000/api/auth/register -H 'Content-Type: application/json' -d '{"firstName":"Juan","lastName":"Guaman","email":"juan@example.com","password":"Password123!"}'
+curl -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{"email":"juan@example.com","password":"Password123!"}'
+curl http://localhost:3000/api/auth/me -H 'Authorization: Bearer ACCESS_TOKEN'
+curl -X POST http://localhost:3000/api/auth/refresh -H 'Content-Type: application/json' -d '{"refreshToken":"REFRESH_TOKEN"}'
+curl -X POST http://localhost:3000/api/auth/logout -H 'Content-Type: application/json' -d '{"refreshToken":"NEW_REFRESH_TOKEN"}'
+```
+
+### Tokens y decisiones de seguridad
+
+- JWT HS256 con algoritmo permitido explicitamente, emisor `booklypro-api`, audiencias y tipos distintos para acceso/refresh. El JWT de acceso contiene sub, rol y claims de control; el refresh contiene sub y un jti aleatorio unico, sin datos personales.
+- Acceso: 15 minutos. Refresh: 7 dias desde cada emision (expiracion deslizante). Secretos independientes; no se confunden los dos tipos de token.
+- PostgreSQL guarda SHA-256 del refresh, UUID de sesion, usuario, familia, expiracion y revocacion. La busqueda usa el hash y comprueba usuario e identificador; nunca se guarda el token original.
+- Rotacion atomica en una transaccion con bloqueo de la fila del usuario. Dos refresh simultaneos permiten una sola rotacion; el segundo se considera replay y revoca la familia, incluido el reemplazo. El cliente debe serializar renovaciones.
+- Logout revoca toda la familia correspondiente, incluso si se presenta un token anterior valido. Repetirlo devuelve 204. Un token con firma invalida o expirado devuelve 401. Otros logins del mismo usuario mantienen familias independientes.
+- **Logout no invalida inmediatamente los access tokens emitidos**: siguen siendo validos hasta su expiracion, como maximo 15 minutos con la configuracion predeterminada. No hay lista de revocacion de access tokens en esta fase.
+- `authenticate()` consulta el usuario en PostgreSQL despues de verificar el JWT; `authorizeRoles()` usa ese rol actual, no un rol obsoleto del token. Usuarios eliminados no pueden acceder.
+- Login usa el mismo error para email inexistente o clave incorrecta y hace una comparacion bcrypt tambien cuando no encuentra usuario. Registro devuelve 409 para duplicados por requisito de la API: ese endpoint permite inferir que un email existe.
+- Limites por IP en memoria: registro/login comparten 20 intentos por 15 minutos; refresh/logout comparten 60 por minuto. Devuelven 429. Antes de desplegar multiples instancias se requiere almacenamiento compartido; configurar proxies de confianza solo conociendo la topologia real.
+- Los tokens se transportan en JSON y el acceso mediante Authorization, sin cookies ni almacenamiento frontend en esta fase. Para un despliegue real se requiere HTTPS y definir la estrategia de almacenamiento del futuro cliente. No guardar tokens en logs ni URLs.
+- Validacion fallida: 400; credenciales/token invalido: 401; rol insuficiente: 403; email duplicado: 409. Los errores mantienen `{ "error": { "message": "..." } }`; los de Zod pueden incluir nombres de campos, nunca valores sensibles.
+
+Referencias: [bcrypt y limite de 72 bytes](https://github.com/kelektiv/node.bcrypt.js/), [verificacion de JWT](https://github.com/auth0/node-jsonwebtoken), [configuracion Prisma 7](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference).
 
 ## Estructura
 
 ```text
 BooklyPro/
-├── client/README.md               # Reservado para una fase posterior
+├── client/README.md              # Frontend pendiente
 ├── server/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── migrations/
+│   ├── prisma/                  # Schema, migraciones y seed
+│   ├── scripts/test-auth.mjs    # Base temporal de integracion
 │   ├── src/
-│   │   ├── config/                # Entorno y conexión Prisma
-│   │   ├── controllers/
+│   │   ├── config/              # Entorno, Prisma y JWT
+│   │   ├── controllers/         # HTTP: health y auth
 │   │   ├── routes/
-│   │   ├── services/              # Lógica de negocio futura
-│   │   ├── repositories/          # Acceso a datos futuro
-│   │   ├── middleware/
-│   │   ├── schemas/               # DTOs Zod futuros
-│   │   ├── utils/
-│   │   ├── types/
-│   │   ├── app.ts                 # Aplicación HTTP comprobable sin BD
-│   │   └── index.ts               # Arranque y cierre ordenado
-│   ├── test/
-│   ├── prisma.config.ts
-│   ├── tsconfig.json
-│   └── .env.example
+│   │   ├── services/            # Flujos de autenticacion
+│   │   ├── repositories/        # Persistencia y transacciones
+│   │   ├── middleware/          # Errores, validacion, auth y roles
+│   │   ├── schemas/             # Validacion Zod
+│   │   ├── utils/               # Hashing y JWT
+│   │   ├── types/               # Contexto Express tipado
+│   │   ├── app.ts
+│   │   └── server.ts
+│   └── test/                    # HTTP e integracion
 ├── docker-compose.yml
-├── eslint.config.mjs
-├── .prettierrc.json
-├── .env.example
-├── .gitignore
-├── package-lock.json
+├── AGENTS.md
 └── package.json
 ```
 
-## Modelo y decisiones
+## Modelo relacional
 
-- Diez entidades: User, Business, Employee, Service, EmployeeService, BusinessSchedule, EmployeeSchedule, Appointment, Review y RefreshToken.
-- UUID como identificadores; roles `CUSTOMER`, `BUSINESS_OWNER` y `ADMIN`. Un propietario tiene varios negocios. Los empleados son recursos del negocio, no usuarios con acceso propio.
-- Claves compuestas garantizan que empleados, servicios y citas pertenezcan al mismo negocio; cada reseña coincide con el cliente y negocio de su cita y solo existe una por cita.
-- Dinero con `Decimal(12,2)`, moneda ISO de tres letras por negocio y precio acordado en la cita. Cambiar el precio del servicio no modifica el historial.
-- Fechas absolutas con `timestamptz`; zona IANA por negocio, inicialmente `America/Guayaquil`. La futura capa de reservas convertirá horario local a instantes UTC.
-- Horarios semanales: domingo = 0 y sábado = 6; `openingTime` y `closingTime` son minutos desde medianoche (09:00 = 540, 18:00 = 1080). Un intervalo por día, sin turnos nocturnos ni pausas múltiples en esta versión. Sin horario activo, no se debe ofrecer disponibilidad. La disponibilidad será la intersección del horario del negocio y del empleado.
-- SQL añade comprobaciones de rangos, importes y fechas. Una exclusión GiST con `btree_gist` impide solapamientos para el mismo empleado, incluso bajo concurrencia. Intervalos `[inicio, fin)` permiten citas contiguas. Solo `CANCELLED` libera el intervalo; el historial de citas completadas y ausencias también conserva su exclusividad.
-- Borrados restrictivos protegen el historial; empleados y servicios se desactivarán. Solo horarios y tokens dependientes usan cascada.
-- Se almacena `passwordHash`, nunca la contraseña; `tokenHash` está preparado para SHA-256 de un token aleatorio y `familyId` para rotación y revocación. El hashing seguro de contraseñas y el protocolo de tokens se implementarán en Fase 2.
-- Índices para propietario, catálogos por negocio, agendas por cliente/negocio y limpieza de tokens. Email de usuario normalizado a minúsculas y sin espacios exteriores mediante constraint.
-- Las carpetas de capas futuras quedan vacías intencionalmente: el endpoint health no necesita un repositorio ni un servicio artificial.
-
-### Reglas que implementará la capa de negocio
-
-La Fase 1 no expone rutas para crear citas ni reseñas. En futuras transacciones, el servicio de reservas deberá validar roles/propiedad, relación EmployeeService, empleado y servicio activos, intersección de horarios y calcular `endTime` desde la duración vigente. Cambiar duración/horarios no debe reescribir citas históricas. El servicio de reseñas verificará que la cita esté completada y pertenezca al usuario autenticado. Los cambios de estado tendrán transiciones explícitas. Estas reglas entre registros no se sustituyen por simples CHECK de PostgreSQL.
-
-## Migraciones
-
-```sh
-npm run db:validate
-npm run db:deploy
-```
-
-`db:deploy` aplica las migraciones versionadas. Para cambios posteriores del esquema, solo en desarrollo:
-
-```sh
-npm run db:migrate -- --name descripcion_del_cambio
-npm run db:generate
-```
-
-La primera migración contiene SQL manual (CHECK y exclusión) que Prisma no representa completamente. Conservarlo en el historial; no reemplazar migraciones con `db push`. El usuario de migraciones necesita permiso para instalar `btree_gist` (el usuario local de Docker lo tiene). Para nuevas migraciones de desarrollo, Prisma necesita permiso para crear su base de datos shadow.
-
-## Verificaciones
-
-```sh
-npm run lint
-npm run format:check
-npm run db:validate
-npm run build
-npm test
-```
-
-Las pruebas HTTP verifican health, 404, JSON inválido, límites de payload y que los errores 500 no filtren detalles. No requieren PostgreSQL.
-
-## Git y siguiente fase
-
-`.env`, dependencias, compilados y cliente Prisma generado están excluidos de Git. Mantener `package-lock.json`, ejemplos de entorno y migraciones versionados. Nunca subir credenciales reales.
-
-Ejemplos de commits: `chore: initialize backend workspace`, `feat: add relational schema and initial migration`, `test: verify API foundation`.
-
-Fase 2 recomendada: registro/login, hashing de contraseñas, JWT de acceso de corta duración, rotación de refresh tokens con revocación, validación Zod, middleware de autenticación y autorización por rol/propietario, con pruebas de seguridad. Después: negocios, servicios, empleados y horarios; luego disponibilidad y reservas transaccionales; finalmente frontend.
-
-Referencia de configuración: [Prisma ORM 7](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference).
-
-### Pruebas de PostgreSQL
-
-Con el contenedor iniciado y la migración aplicada, en PowerShell:
-
-```powershell
-Get-Content -Raw server/test/constraints.sql | docker compose exec -T postgres psql -U booklypro -d booklypro -v ON_ERROR_STOP=1
-```
-
-Ajustar usuario/base si cambiaste el entorno. Las fixtures se ejecutan dentro de una transacción que termina en `ROLLBACK`. Verifican intervalos contiguos, solapamientos, cancelación, relaciones entre negocios y CHECK de importes, horarios y rating.
-
-### Avisos de dependencias
-
-La revisión inicial con `npm audit` detectó cuatro entradas de severidad alta en el árbol de Prisma 7.10.0 (`prisma`, `@prisma/config`, `deepmerge-ts` y `mysql2`); también aparecen con `--omit=dev` por las relaciones de dependencias de Prisma. MySQL no se utiliza en esta aplicación. La corrección automática propuesta implica bajar a Prisma 6, incompatible con esta configuración; no se aplicó `audit fix --force`. Revisar actualizaciones compatibles antes de un despliegue público. Esta base es de desarrollo y no implementa aún los controles de autenticación de la Fase 2.
-
-## Flujo de ramas
-
-Repositorio: https://github.com/Viths3/BooklyPro.git. Las instrucciones permanentes estan en [AGENTS.md](AGENTS.md).
-
-- `main`: versiones estables integradas desde `develop`.
-- `develop`: rama de integracion y base de nuevas funcionalidades.
-- `feature/*`: una funcionalidad o tarea importante por rama.
-
-```sh
-git switch develop
-git pull --ff-only origin develop
-git switch -c feature/nombre-de-la-funcionalidad
-# Implementar, comprobar y hacer commits descriptivos.
-git status
-git diff
-git diff --cached
-git push -u origin feature/nombre-de-la-funcionalidad
-git switch develop
-git pull --ff-only origin develop
-git merge --no-ff feature/nombre-de-la-funcionalidad
-git push origin develop
-```
-
-Al completar una fase estable y comprobada:
-
-```sh
-git switch main
-git pull --ff-only origin main
-git merge --no-ff develop
-git push origin main
-git switch develop
-```
-
-No desarrollar directamente en `main`, no usar force push y no borrar ramas con trabajo sin integrar. Si hay conflictos, resolverlos conservando los cambios pertinentes y repetir las verificaciones antes de publicar. Una feature integrada puede eliminarse con `git branch -d feature/nombre` y, despues de comprobar su integracion remota, `git push origin --delete feature/nombre`.
-
-La Fase 1 se implemento antes de existir historial Git. Su registro inicial se separo por responsabilidad en `feature/project-setup`, `feature/database-setup`, `feature/prisma-schema` y `feature/health-endpoint`; no representa desarrollo historico previo. `feature/git-workflow` agrega estas reglas y finales de linea consistentes entre Windows y Linux. El commit raiz vacio es solo el punto de partida de `main`. La promocion de esta fase a `main` queda pendiente de revisar los avisos de dependencias documentados arriba.
-
-Para inspeccionar la evolucion:
-
-```sh
-git log --graph --oneline --decorate --all
-```
-
-### Verificar la infraestructura local
-
-Antes de iniciar, abrir Docker Desktop. Solo PostgreSQL se ejecuta en Docker:
-
-```sh
-docker version
-docker compose up -d --wait
-docker compose ps
-docker compose exec postgres pg_isready -U booklypro -d booklypro
-npm run db:validate
-```
-
-El contenedor debe aparecer como saludable. Los datos permanecen en un volumen administrado por Docker, fuera del repositorio. La API corre en Node.js local.
-
-Tras configurar ambos archivos de entorno, tambi?n puedes iniciar desde el backend:
-
-```sh
-cd server
-npm install
-npm run dev
-```
-
-El script `predev` genera autom?ticamente el cliente Prisma. Para instalaciones reproducibles se recomienda `npm ci` desde la ra?z, usando el lockfile del monorepo. Para generar el cliente manualmente: `npm run db:generate` desde la ra?z o desde `server/`.
-
-Para comprobar una ca?da en tu entorno local, mant?n la API encendida, ejecuta `docker compose stop postgres` y consulta `/api/health`: debe responder 503. Despu?s ejecuta `docker compose up -d --wait` y repite la consulta: debe volver a responder 200. La parada afecta a las conexiones locales al contenedor; no borra el volumen.
-
-## Esquema relacional completo
-
-La migraci?n incremental `20261012170000_complete_core_schema` completa el esquema existente sin reescribir la primera migraci?n. A?ade `Role.ADMIN`, `Business.active`, `DayOfWeek`, auditor?a de horarios/rese?as e ?ndices de agenda. Convierte domingo=0 a `SUNDAY` y los dem?s d?as de forma expl?cita; renombra las horas del empleado sin perder datos. Para registros anteriores, las fechas de auditor?a de horarios comienzan en la migraci?n; las rese?as toman su `createdAt` como `updatedAt` inicial. Despu?s Prisma mantiene `updatedAt` (las escrituras SQL directas deben proporcionarlo).
+Tablas: User, Business, Employee, Service, EmployeeService, BusinessSchedule, EmployeeSchedule, Appointment, Review y RefreshToken.
 
 ```mermaid
 erDiagram
@@ -265,47 +210,49 @@ erDiagram
   Appointment ||--o| Review : receives
 ```
 
-### ?ndices y restricciones
+- UUID consistentes. Roles CUSTOMER, BUSINESS_OWNER y ADMIN; estados de cita PENDING, CONFIRMED, COMPLETED, CANCELLED y NO_SHOW.
+- Dinero `Decimal(12,2)`, moneda por negocio y precio acordado en cada cita para conservar historial.
+- Fechas absolutas `timestamptz` y zona IANA por negocio. Horarios locales en minutos desde medianoche, enum MONDAY a SUNDAY y un intervalo por dia. Negocio usa openingTime/closingTime y empleado startTime/endTime; no hay pausas multiples ni turnos nocturnos.
+- Claves compuestas impiden mezclar negocios en empleados, servicios y citas. La reseña coincide con cliente y negocio de su cita y solo hay una por cita.
+- CHECK: rating 1-5, precios no negativos, duracion 1-1440 minutos, horarios coherentes, fechas de tokens y formato de hash/moneda/email.
+- La exclusion GiST con btree_gist impide citas solapadas del mismo empleado incluso con concurrencia. Intervalos `[inicio, fin)` permiten citas contiguas; solo CANCELLED libera el intervalo.
+- Indices por propietario, catalogos activos, agendas por cliente/negocio/empleado y fecha, estado/fecha y fecha global; reseñas por negocio/fecha; tokens por usuario, familia y expiracion.
+- Borrados restrictivos conservan historial; solo horarios y tokens dependientes usan cascada.
+- La logica futura debe validar propiedad, rol BUSINESS_OWNER del propietario, servicio y empleado activos, relacion EmployeeService, duracion e interseccion de horarios, transiciones de estado y citas completadas para reseñar. No se ha implementado esa logica todavia.
 
-- Email ?nico (normalizado en min?sculas); UUID consistentes en claves primarias y for?neas.
-- ?ndices de negocio por propietario y por `active, name` para listado ordenado. Este ?ltimo no es b?squeda de texto completo.
-- Empleados y servicios por `businessId, active`.
-- Citas por cliente/fecha, negocio/fecha, empleado/fecha y estado/fecha. Un ?ndice de fecha permite consultas cronol?gicas globales sin exigir una entidad o estado concreto; no se a?ade otro ?ndice simple de estado porque ya lo cubre el compuesto.
-- Rese?as por negocio/fecha y cliente; una ?nica rese?a por cita. La clave compuesta adicional permite a Prisma expresar que coincida tambi?n su cliente y negocio.
-- Tokens por usuario, familia y expiraci?n; solo se almacena el hash, nunca el token original.
-- Claves compuestas impiden mezclar servicios, empleados y citas de negocios diferentes. La redundancia controlada de `businessId` permite que PostgreSQL garantice esa integridad.
-- Un horario por negocio/d?a y empleado/d?a. El enum restringe los d?as y los CHECK validan minutos de 0 a 1440 con inicio menor que fin.
-- CHECK existentes: rating 1?5, precio no negativo, duraci?n de 1 a 1440 minutos, fin de cita posterior al inicio, formato y vigencia de tokens y moneda de tres letras.
-- Se conserva la exclusi?n GiST con `btree_gist` de la primera migraci?n: protege contra solapamientos concurrentes sin implementar a?n el motor de disponibilidad.
-- Borrados restringidos para conservar historial. Cascada ?nicamente en horarios dependientes y tokens, que no tienen sentido sin su entidad propietaria.
-
-El rol del propietario, la pertenencia del cliente autenticado, que una rese?a corresponda a una cita completada y la disponibilidad dentro de horarios se validar?n en la futura capa de negocio. No se a?aden triggers para implementar esa l?gica en esta fase.
-
-### Migraciones y seed
-
-Desde la ra?z y con los dos archivos `.env` configurados:
+## Migraciones y seed
 
 ```sh
-docker compose up -d --wait
 npm run db:validate
 npm run db:generate
 npm run db:deploy
 npm run db:seed
 ```
 
-El seed solo permite `NODE_ENV=development`. Usa una transacci?n y upserts: repetirlo conserva los datos existentes y no duplica filas. Crea:
+La migracion `20261012150000_init` crea las tablas y las restricciones SQL personalizadas. `20261012170000_complete_core_schema` añade ADMIN, Business.active, DayOfWeek, auditoria e indices. Conserva los horarios antiguos al convertir domingo=0 a SUNDAY y renombra las columnas del empleado sin borrar datos. Las reseñas anteriores toman createdAt como updatedAt inicial; la auditoria de horarios comienza en la migracion. Prisma mantiene updatedAt en sus escrituras; el SQL directo debe proporcionarlo.
 
-- Propietaria Ana Demo (`owner@booklypro.example`) y cliente Luis Demo (`customer@booklypro.example`).
-- BooklyPro Barber?a Demo, moneda USD y zona America/Guayaquil.
-- Corte de cabello: USD 15, 30 minutos; arreglo de barba: USD 8, 20 minutos.
-- Empleado Carlos Demo, asignado a ambos servicios.
-- Horario de negocio lunes?viernes 09:00?18:00 y de empleado 09:00?17:00.
+Para futuras migraciones, solo en desarrollo:
 
-No crea citas, rese?as ni refresh tokens. No hay contrase?a p?blica de prueba: el seed genera credenciales aleatorias, guarda un hash scrypt con salt y descarta el valor original. No implementa login. Los UUID fijos de las fixtures de negocio, empleado y servicios est?n reservados para este seed; si los datos existentes entran en conflicto, la transacci?n falla en vez de sobrescribirlos.
+```sh
+npm run db:migrate -- --name descripcion_del_cambio
+npm run db:generate
+```
 
-### Reset exclusivo de desarrollo
+Conservar el SQL personalizado: Prisma no expresa todos los CHECK ni la exclusion. No sustituir migraciones por `db push`. El usuario de migraciones necesita permiso para btree_gist y para crear la base shadow en desarrollo. La autenticacion reutiliza el modelo existente y no necesita otra migracion.
 
-**El siguiente comando elimina todos los datos locales del esquema configurado en DATABASE_URL.** Comprueba que apunta a la base de desarrollo antes de ejecutarlo; no usar en producci?n. No es necesario para aplicar esta migraci?n incremental.
+El seed solo admite NODE_ENV=development. Es transaccional y repetible; no duplica ni sobrescribe datos existentes. Crea:
+
+- Ana Demo, BUSINESS_OWNER, owner@booklypro.example; Luis Demo, CUSTOMER, customer@booklypro.example.
+- BooklyPro Barberia Demo (USD, America/Guayaquil).
+- Corte de cabello: USD 15/30 minutos; arreglo de barba: USD 8/20 minutos.
+- Carlos Demo, empleado asignado a ambos servicios.
+- Lunes-viernes: negocio 09:00-18:00, empleado 09:00-17:00.
+
+No crea citas, reseñas ni sesiones. Los usuarios antiguos del seed tienen hashes scrypt de valores aleatorios descartados y no disponen de una contraseña de login. Registrar un usuario nuevo para probar autenticacion. Los UUID fijos de negocio, empleado y servicios estan reservados para estas fixtures; los conflictos hacen fallar la transaccion en vez de sobrescribir otros datos.
+
+### Reset de desarrollo
+
+**Este comando elimina todos los datos del esquema indicado en DATABASE_URL.** Comprobar que apunta a desarrollo, nunca a produccion. No es necesario para aplicar nuevas migraciones.
 
 ```sh
 cd server
@@ -314,4 +261,46 @@ npx prisma generate
 npx prisma db seed
 ```
 
-El reset vuelve a aplicar el historial de migraciones; el seed se ejecuta expl?citamente. No se ha reseteado la base existente durante esta tarea.
+## Verificaciones
+
+```sh
+npm run lint
+npm run format:check
+npm run build
+npm test
+npm run test:integration
+```
+
+`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
+
+Cubre registro, duplicados, hashing, validacion y roles, login correcto/incorrecto, me, rotacion, replay, expiracion, logout idempotente, familias independientes, concurrencia, limites de intentos y health.
+
+Pruebas adicionales de constraints, con rollback:
+
+```powershell
+Get-Content -Raw server/test/constraints.sql | docker compose exec -T postgres psql -U booklypro -d booklypro -v ON_ERROR_STOP=1
+```
+
+La revision de dependencias mantiene cuatro avisos altos transitivos de Prisma 7.10.0, documentados desde la inicializacion (prisma, @prisma/config, deepmerge-ts y mysql2). La solucion automatica propone bajar a Prisma 6; no se ejecuto audit fix --force. Revisar actualizaciones compatibles antes de publicar el servicio.
+
+## Flujo Git
+
+Reglas permanentes en [AGENTS.md](AGENTS.md). main contiene versiones estables; develop es la base de trabajo; cada funcionalidad usa feature/*.
+
+```sh
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/nombre
+# Implementar, revisar git status/diff y verificar antes de integrar.
+git push -u origin feature/nombre
+git switch develop
+git pull --ff-only origin develop
+git merge --no-ff feature/nombre
+git push origin develop
+```
+
+Solo promover una fase estable desde develop a main; despues volver a develop. No usar force push, trabajar directamente en main ni borrar ramas sin integrar. Los .env, credenciales, dependencias, compilados y cliente Prisma generado estan excluidos de Git.
+
+La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
+
+Siguiente tarea: feature/business-management. No se inicia en esta entrega.
