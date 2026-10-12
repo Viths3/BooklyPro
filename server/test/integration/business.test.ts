@@ -32,10 +32,14 @@ const app = createApp(checkDatabase, {
 });
 const server = app.listen(0, '127.0.0.1');
 let base: string;
-const sessionSchema = z.object({
-  accessToken: z.string(),
-  user: z.object({ id: z.uuid() }),
-});
+const sessionSchema = z
+  .object({
+    data: z.object({
+      accessToken: z.string(),
+      user: z.object({ id: z.uuid() }),
+    }),
+  })
+  .transform((value) => value.data);
 const businessSchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -158,7 +162,7 @@ test('customer creates a business and is promoted atomically', async () => {
   const me = await (
     await request('/api/auth/me', 'GET', owner.accessToken)
   ).json();
-  assert.equal(me.role, 'BUSINESS_OWNER'); // Same access token uses current DB role.
+  assert.equal(me.data.role, 'BUSINESS_OWNER'); // Same access token uses current DB role.
 });
 test('an owner can create a second business', async () => {
   const response = await request('/api/businesses', 'POST', owner.accessToken, {
@@ -454,5 +458,5 @@ test('health and authentication continue working after business operations', asy
   assert.equal((await request('/api/health')).status, 200);
   const me = await request('/api/auth/me', 'GET', owner.accessToken);
   assert.equal(me.status, 200);
-  assert.equal((await me.json()).role, 'BUSINESS_OWNER');
+  assert.equal((await me.json()).data.role, 'BUSINESS_OWNER');
 });

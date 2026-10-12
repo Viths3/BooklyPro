@@ -23,7 +23,8 @@ export class BusinessService {
   }
   async getActive(id: string) {
     const business = await this.repository.findActive(id);
-    if (!business) throw new AppError(404, 'Business not found');
+    if (!business)
+      throw new AppError(404, 'Business not found', 'BUSINESS_NOT_FOUND');
     return business;
   }
   getOwned(ownerId: string) {

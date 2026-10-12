@@ -22,7 +22,8 @@ export class EmployeeService {
   constructor(private readonly repository: EmployeeRepository) {}
   async listPublic(businessId: string) {
     const business = await this.repository.findPublicBusiness(businessId);
-    if (!business) throw new AppError(404, 'Business not found');
+    if (!business)
+      throw new AppError(404, 'Business not found', 'BUSINESS_NOT_FOUND');
     return business.employees;
   }
   async listManaged(businessId: string, userId: string) {
@@ -35,7 +36,8 @@ export class EmployeeService {
   }
   async getPublic(id: string) {
     const employee = await this.repository.findActive(id);
-    if (!employee) throw new AppError(404, 'Employee not found');
+    if (!employee)
+      throw new AppError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
     return { ...employee, services: services(employee.services) };
   }
   async create(businessId: string, userId: string, input: CreateEmployeeInput) {
@@ -56,13 +58,15 @@ export class EmployeeService {
     ) => Promise<T>,
   ) {
     const found = await this.repository.findBusinessId(id);
-    if (!found) throw new AppError(404, 'Employee not found');
+    if (!found)
+      throw new AppError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
     return this.repository.withLockedBusiness(
       found.businessId,
       async (context) => {
         assertBusinessOwner(context.business, userId);
         const employee = await context.findEmployee(id);
-        if (!employee) throw new AppError(404, 'Employee not found');
+        if (!employee)
+          throw new AppError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
         return action({ ...context, business: context.business }, employee);
       },
     );
@@ -86,7 +90,8 @@ export class EmployeeService {
   ) {
     return this.withOwnedEmployee(id, userId, async (context, employee) => {
       const service = await context.findService(serviceId);
-      if (!service) throw new AppError(404, 'Service not found');
+      if (!service)
+        throw new AppError(404, 'Service not found', 'SERVICE_NOT_FOUND');
       if (service.businessId !== employee.businessId)
         throw new AppError(
           400,

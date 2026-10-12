@@ -13,7 +13,8 @@ function response(service: ServiceRecord) {
   return { ...service, price: service.price.toFixed(2) };
 }
 function requireActive(active: boolean) {
-  if (!active) throw new AppError(409, 'Business is inactive');
+  if (!active)
+    throw new AppError(409, 'Business is inactive', 'BUSINESS_INACTIVE');
 }
 export class ServiceService {
   constructor(private readonly repository: ServiceRepository) {}
@@ -22,7 +23,8 @@ export class ServiceService {
       businessId,
       true,
     );
-    if (!business) throw new AppError(404, 'Business not found');
+    if (!business)
+      throw new AppError(404, 'Business not found', 'BUSINESS_NOT_FOUND');
     return business.services.map(response);
   }
   async listManaged(businessId: string, userId: string) {
@@ -35,7 +37,8 @@ export class ServiceService {
   }
   async getPublic(id: string) {
     const service = await this.repository.findActive(id);
-    if (!service) throw new AppError(404, 'Service not found');
+    if (!service)
+      throw new AppError(404, 'Service not found', 'SERVICE_NOT_FOUND');
     return response(service);
   }
   async create(businessId: string, userId: string, input: CreateServiceInput) {
@@ -47,7 +50,8 @@ export class ServiceService {
   }
   private async businessId(id: string) {
     const service = await this.repository.findBusinessId(id);
-    if (!service) throw new AppError(404, 'Service not found');
+    if (!service)
+      throw new AppError(404, 'Service not found', 'SERVICE_NOT_FOUND');
     return service.businessId;
   }
   async update(id: string, userId: string, input: UpdateServiceInput) {

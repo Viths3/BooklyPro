@@ -46,10 +46,14 @@ const app = createApp(checkDatabase, {
   ),
 });
 const server = app.listen(0, '127.0.0.1');
-const sessionSchema = z.object({
-  accessToken: z.string(),
-  user: z.object({ id: z.uuid() }),
-});
+const sessionSchema = z
+  .object({
+    data: z.object({
+      accessToken: z.string(),
+      user: z.object({ id: z.uuid() }),
+    }),
+  })
+  .transform((value) => value.data);
 const employeeSchema = z.object({
   id: z.uuid(),
   firstName: z.string(),

@@ -96,3 +96,17 @@ export function generateTimeSlots(options: SlotOptions) {
   }
   return slots;
 }
+
+export function localTimeToInstant(
+  date: string,
+  minutes: number,
+  timeZone: string,
+): Date {
+  return new Date(
+    Temporal.PlainDate.from(date)
+      .toPlainDateTime()
+      .add({ minutes })
+      .toZonedDateTime(timeZone, { disambiguation: 'reject' })
+      .epochMilliseconds,
+  );
+}

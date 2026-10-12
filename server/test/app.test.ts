@@ -28,7 +28,7 @@ test('health returns the public API contract', async () => {
   assert.equal(response.status, 200);
   assert.equal(databaseChecks, 1);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await response.json(), {
+  assert.deepEqual((await response.json()).data, {
     status: 'ok',
     service: 'booklypro-api',
     database: 'connected',
@@ -39,7 +39,7 @@ test('unknown routes return JSON 404', async () => {
   const response = await fetch(`${baseUrl}/missing`);
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), {
-    error: { message: 'Route not found' },
+    error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found' },
   });
 });
 test('invalid JSON returns 400', async () => {
@@ -74,7 +74,10 @@ test('unexpected errors do not expose internal details', async () => {
     );
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), {
-      error: { message: 'Internal server error' },
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred',
+      },
     });
   } finally {
     await new Promise<void>((resolve) => failingServer.close(() => resolve()));
@@ -95,9 +98,10 @@ test('database failure returns 503 without exposing connection details', async (
     assert.equal(response.status, 503);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.deepEqual(await response.json(), {
-      status: 'error',
-      service: 'booklypro-api',
-      database: 'disconnected',
+      error: {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database is unavailable',
+      },
     });
   } finally {
     await new Promise<void>((resolve) => failingServer.close(() => resolve()));

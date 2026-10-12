@@ -58,7 +58,8 @@ export class ScheduleService {
     let businessId = id;
     if (kind === 'employee') {
       const employee = await this.repository.findEmployeeBusiness(id);
-      if (!employee) throw new AppError(404, 'Employee not found');
+      if (!employee)
+        throw new AppError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
       businessId = employee.businessId;
     }
     return this.repository.withLockedBusiness(
@@ -67,9 +68,9 @@ export class ScheduleService {
       async (context) => {
         assertBusinessOwner(context.business, userId);
         if (!context.business.active)
-          throw new AppError(409, 'Business is inactive');
+          throw new AppError(409, 'Business is inactive', 'BUSINESS_INACTIVE');
         if (kind === 'employee' && !context.employee)
-          throw new AppError(404, 'Employee not found');
+          throw new AppError(404, 'Employee not found', 'EMPLOYEE_NOT_FOUND');
         // Inactive employees can have their schedules corrected before reactivation.
         let schedules: ScheduleInput[];
         let updated: ScheduleInput | undefined;

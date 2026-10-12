@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js';
 import type { DayOfWeek } from '../generated/prisma/enums.js';
-function reader(tx: Prisma.TransactionClient) {
+export function createAvailabilityReader(tx: Prisma.TransactionClient) {
   return {
     business: (id: string, dayOfWeek: DayOfWeek) =>
       tx.business.findUnique({
@@ -17,7 +17,12 @@ function reader(tx: Prisma.TransactionClient) {
     service: (id: string) =>
       tx.service.findUnique({
         where: { id },
-        select: { businessId: true, active: true, durationMinutes: true },
+        select: {
+          businessId: true,
+          active: true,
+          durationMinutes: true,
+          price: true,
+        },
       }),
     employee: (id: string, dayOfWeek: DayOfWeek, serviceId: string) =>
       tx.employee.findUnique({
@@ -48,11 +53,15 @@ function reader(tx: Prisma.TransactionClient) {
 export class AvailabilityRepository {
   constructor(private readonly db: PrismaClient) {}
   read<T>(
-    action: (context: ReturnType<typeof reader>) => Promise<T>,
+    action: (
+      context: ReturnType<typeof createAvailabilityReader>,
+    ) => Promise<T>,
   ): Promise<T> {
     // Consistent read snapshot; this endpoint does not reserve or lock slots.
-    return this.db.$transaction((tx) => action(reader(tx)), {
+    return this.db.$transaction((tx) => action(createAvailabilityReader(tx)), {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
     });
   }
 }
+
+export type AvailabilityReader = ReturnType<typeof createAvailabilityReader>;
