@@ -1,6 +1,6 @@
 ﻿# BooklyPro
 
-Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como proyecto Full Stack de portafolio.
+Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como proyecto Full Stack.
 
 ## Estado actual
 
