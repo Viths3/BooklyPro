@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. No hay frontend ni CRUD de negocios o reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. No hay frontend ni gestion de servicios, empleados o reservas todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -168,12 +168,12 @@ BooklyPro/
 ├── client/README.md              # Frontend pendiente
 ├── server/
 │   ├── prisma/                  # Schema, migraciones y seed
-│   ├── scripts/test-auth.mjs    # Base temporal de integracion
+│   ├── scripts/test-integration.mjs    # Base temporal de integracion
 │   ├── src/
 │   │   ├── config/              # Entorno, Prisma y JWT
-│   │   ├── controllers/         # HTTP: health y auth
+│   │   ├── controllers/         # HTTP: health, auth y negocios
 │   │   ├── routes/
-│   │   ├── services/            # Flujos de autenticacion
+│   │   ├── services/            # Autenticacion y negocios
 │   │   ├── repositories/        # Persistencia y transacciones
 │   │   ├── middleware/          # Errores, validacion, auth y roles
 │   │   ├── schemas/             # Validacion Zod
@@ -271,7 +271,7 @@ npm test
 npm run test:integration
 ```
 
-`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
+`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion y negocios, cada suite con una base separada. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
 
 Cubre registro, duplicados, hashing, validacion y roles, login correcto/incorrecto, me, rotacion, replay, expiracion, logout idempotente, familias independientes, concurrencia, limites de intentos y health.
 
@@ -303,4 +303,68 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-Siguiente tarea: feature/business-management. No se inicia en esta entrega.
+Siguiente tarea: feature/services-management. No se inicia en esta entrega.
+
+## Gestion de negocios
+
+| Metodo | Endpoint              | Acceso y respuesta                                           |
+| ------ | --------------------- | ------------------------------------------------------------ |
+| GET    | `/api/businesses`     | Publico; 200 con data y pagination                           |
+| GET    | `/api/businesses/:id` | Publico; 200 con data; 404 si falta o esta inactivo          |
+| GET    | `/api/businesses/me`  | Autenticado; 200 con todos sus negocios, incluidos inactivos |
+| POST   | `/api/businesses`     | Autenticado; 201 con data y cabecera Location                |
+| PATCH  | `/api/businesses/:id` | Solo propietario; 200 con data                               |
+| DELETE | `/api/businesses/:id` | Solo propietario; 204, desactivacion idempotente             |
+
+`/me` se declara antes de `/:id` y siempre obtiene el propietario del contexto autenticado; no utiliza filtros ownerId del cliente. Las respuestas seleccionan solo campos del negocio, nunca relaciones del propietario, emails de usuarios, contrasenas ni tokens. Se envian con Cache-Control: no-store para evitar cachear negocios desactivados o respuestas privadas.
+
+### Creacion, permisos y transacciones
+
+Crear un negocio y promover al usuario CUSTOMER a BUSINESS_OWNER forman una unica transaccion. Si falla la creacion, el rol no cambia. La actualizacion condicional del rol permite creaciones concurrentes y mantiene intacto el rol ADMIN. El mismo access token sirve para las nuevas operaciones: el middleware consulta el rol actual en PostgreSQL.
+
+Un usuario puede tener varios negocios. El cliente no puede asignar ownerId, active ni role. La comprobacion de propiedad esta centralizada en BusinessService; la escritura vuelve a filtrar por propietario. Sin autenticacion se responde 401; otro propietario recibe 403; un ID inexistente recibe 404. ADMIN no tiene una excepcion administrativa: solo modifica negocios propios en esta fase.
+
+DELETE establece active=false, conserva el historial y responde 204 tambien si ya estaba desactivado. El negocio deja de aparecer en listado y detalle publicos, incluso cuando quien consulta el detalle es el propietario. El propietario sigue viendolo en /me y puede editar sus datos descriptivos; PATCH no permite reactivarlo. Su rol permanece BUSINESS_OWNER tras desactivar todos los negocios.
+
+No se han creado endpoints de servicios, empleados o reservas. Esas futuras operaciones deberan verificar que el negocio esta activo; BusinessService.getActive() ya centraliza la consulta que rechaza negocios inactivos. Esta entrega reutiliza el esquema existente, sin nuevas migraciones ni dependencias.
+
+### Validacion, busqueda y paginacion
+
+- POST requiere name (1-150 caracteres tras eliminar espacios exteriores).
+- description (maximo 5000), phone (3-30, caracteres telefonicos), address (maximo 500) e imageUrl (HTTP(S), maximo 2048, sin credenciales) son opcionales y aceptan null para borrarlos.
+- PATCH permite solo esos cinco campos, exige al menos uno y conserva los omitidos. No admite id, ownerId, active, role, createdAt ni relaciones internas.
+- Los IDs se validan como UUID. Los cuerpos y las queries publicas rechazan campos desconocidos; los errores de validacion devuelven 400.
+- page: entero entre 1 y 10000, predeterminado 1. limit: entero entre 1 y 100, predeterminado 10.
+- search: hasta 150 caracteres, busqueda parcial por nombre sin distinguir mayusculas. Los caracteres %, _ y barra inversa se tratan literalmente; las consultas usan parametros Prisma.
+- sortBy: name o createdAt (predeterminado createdAt). order: asc o desc (predeterminado desc). ID desempata para una ordenacion estable.
+- El total y la pagina se consultan en una transaccion RepeatableRead para obtener una vista consistente. Las paginas fuera del rango devuelven data vacia con el total real; un resultado sin coincidencias tiene totalPages=0.
+
+```json
+{
+  "data": [],
+  "pagination": { "page": 1, "limit": 10, "total": 0, "totalPages": 0 }
+}
+```
+
+### Probar los seis endpoints en PowerShell
+
+Usar el access token obtenido con el login del ejemplo de autenticacion:
+
+```powershell
+$businessApi = 'http://localhost:3000/api/businesses'
+$headers = @{ Authorization = "Bearer $($session.accessToken)" }
+$body = @{ name = 'Bookly Barber Shop'; description = 'Barberia profesional'; phone = '+593999999999'; address = 'Cuenca, Ecuador'; imageUrl = 'https://example.com/barber.jpg' } | ConvertTo-Json
+$created = Invoke-RestMethod $businessApi -Method Post -Headers $headers -ContentType 'application/json' -Body $body
+$businessId = $created.data.id
+Invoke-RestMethod "${businessApi}?page=1&limit=10&search=barber&sortBy=name&order=asc"
+Invoke-RestMethod "$businessApi/$businessId"
+Invoke-RestMethod "$businessApi/me" -Headers $headers
+$patch = @{ name = 'Bookly Barber Shop Centro'; description = $null } | ConvertTo-Json
+Invoke-RestMethod "$businessApi/$businessId" -Method Patch -Headers $headers -ContentType 'application/json' -Body $patch
+Invoke-RestMethod "$businessApi/$businessId" -Method Delete -Headers $headers
+Invoke-RestMethod "$businessApi/me" -Headers $headers
+```
+
+Tras DELETE, la consulta publica por ID devuelve 404; /me conserva el negocio con active=false. No usar un access token expirado: iniciar otra sesion o renovar con el refresh vigente.
+
+Las pruebas de integracion cubren los doce escenarios solicitados, inyeccion de campos protegidos, datos invalidos, busqueda literal, permisos de ADMIN, rollback del rol ante fallo y creacion concurrente. Ejecutarlas con `npm run test:integration`; la suite anterior de autenticacion tambien se ejecuta para detectar regresiones.
