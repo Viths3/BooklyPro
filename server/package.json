@@ -14,7 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "predev": "prisma generate",
     "db:seed": "prisma db seed",
-    "test:integration": "node scripts/test-auth.mjs"
+    "test:integration": "node scripts/test-integration.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",
