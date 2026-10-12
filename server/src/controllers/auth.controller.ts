@@ -5,15 +5,15 @@ import type { RegisterInput } from '../schemas/auth.schema.js';
 export function createAuthController(auth: AuthService) {
   const register: RequestHandler = async (req, res) => {
     const input = req.body as RegisterInput;
-    res.status(201).json(await auth.register(input));
+    res.status(201).json({ data: await auth.register(input) });
   };
   const login: RequestHandler = async (req, res) => {
     const input = req.body as { email: string; password: string };
-    res.json(await auth.login(input.email, input.password));
+    res.json({ data: await auth.login(input.email, input.password) });
   };
   const refresh: RequestHandler = async (req, res) => {
     const input = req.body as { refreshToken: string };
-    res.json(await auth.refresh(input.refreshToken));
+    res.json({ data: await auth.refresh(input.refreshToken) });
   };
   const logout: RequestHandler = async (req, res) => {
     const input = req.body as { refreshToken: string };
@@ -21,7 +21,7 @@ export function createAuthController(auth: AuthService) {
     res.status(204).end();
   };
   const me: RequestHandler = (req, res) => {
-    res.json(req.authUser);
+    res.json({ data: req.authUser });
   };
   return { register, login, refresh, logout, me };
 }

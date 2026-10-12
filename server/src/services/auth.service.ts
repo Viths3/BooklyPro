@@ -40,7 +40,11 @@ export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
   async register(input: RegisterInput) {
     if (await this.repository.findByEmail(input.email))
-      throw new AppError(409, 'Email already registered');
+      throw new AppError(
+        409,
+        'Email already registered',
+        'EMAIL_ALREADY_REGISTERED',
+      );
     const passwordHash = await hashPassword(input.password);
     try {
       return await this.repository.createCustomer({
@@ -54,7 +58,11 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       )
-        throw new AppError(409, 'Email already registered');
+        throw new AppError(
+          409,
+          'Email already registered',
+          'EMAIL_ALREADY_REGISTERED',
+        );
       throw error;
     }
   }

@@ -40,12 +40,16 @@ const server = app.listen(0, '127.0.0.1');
 let baseUrl: string;
 const password = 'Password123!';
 const email = 'customer@example.test';
-const sessionSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  expiresIn: z.number(),
-  user: z.object({ id: z.uuid(), role: z.string() }),
-});
+const sessionSchema = z
+  .object({
+    data: z.object({
+      accessToken: z.string(),
+      refreshToken: z.string(),
+      expiresIn: z.number(),
+      user: z.object({ id: z.uuid(), role: z.string() }),
+    }),
+  })
+  .transform((value) => value.data);
 let session: z.infer<typeof sessionSchema>;
 
 before(async () => {
@@ -83,7 +87,7 @@ test('register normalizes email, hashes password and returns only safe fields', 
     password,
   });
   assert.equal(response.status, 201);
-  const body = (await response.json()) as Record<string, unknown>;
+  const body = (await response.json()).data as Record<string, unknown>;
   assert.deepEqual(Object.keys(body).sort(), [
     'email',
     'firstName',
@@ -170,7 +174,7 @@ test('me requires a valid access token and exposes safe fields', async () => {
   const response = await get('me', session.accessToken);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  const user = await response.json();
+  const user = (await response.json()).data;
   assert.deepEqual(Object.keys(user).sort(), [
     'email',
     'firstName',
@@ -306,7 +310,7 @@ test('database expiration is enforced even with a valid JWT', async () => {
 test('health remains connected with authentication enabled', async () => {
   const response = await fetch(baseUrl.replace('/auth', '/health'));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {
+  assert.deepEqual((await response.json()).data, {
     status: 'ok',
     service: 'booklypro-api',
     database: 'connected',

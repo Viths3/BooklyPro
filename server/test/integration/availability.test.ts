@@ -60,10 +60,14 @@ const app = createApp(checkDatabase, {
   ),
 });
 const server = app.listen(0, '127.0.0.1');
-const sessionSchema = z.object({
-  accessToken: z.string(),
-  user: z.object({ id: z.uuid() }),
-});
+const sessionSchema = z
+  .object({
+    data: z.object({
+      accessToken: z.string(),
+      user: z.object({ id: z.uuid() }),
+    }),
+  })
+  .transform((value) => value.data);
 const idSchema = z.object({ data: z.object({ id: z.uuid() }) });
 let base: string;
 let owner: z.infer<typeof sessionSchema>;

@@ -22,14 +22,24 @@ export function createAuthRouter(auth: AuthService) {
     limit: 20,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    message: { error: { message: 'Too many attempts. Try again later.' } },
+    message: {
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many attempts. Try again later.',
+      },
+    },
   });
   const sessions = rateLimit({
     windowMs: 60 * 1000,
     limit: 60,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    message: { error: { message: 'Too many attempts. Try again later.' } },
+    message: {
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many attempts. Try again later.',
+      },
+    },
   });
   router.post(
     '/register',
