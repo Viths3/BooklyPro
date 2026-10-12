@@ -1,3 +1,6 @@
+import { EmployeeRepository } from './repositories/employee.repository.js';
+import { EmployeeService } from './services/employee.service.js';
+import { createEmployeeRouter } from './routes/employee.routes.js';
 import { ServiceRepository } from './repositories/service.repository.js';
 import { ServiceService } from './services/service.service.js';
 import { createServiceRouter } from './routes/service.routes.js';
@@ -15,6 +18,10 @@ const auth = new AuthService(new AuthRepository(prisma));
 const businesses = new BusinessService(new BusinessRepository(prisma));
 const app = createApp(checkDatabase, {
   auth: createAuthRouter(auth),
+  employees: createEmployeeRouter(
+    new EmployeeService(new EmployeeRepository(prisma)),
+    auth,
+  ),
   services: createServiceRouter(
     new ServiceService(new ServiceRepository(prisma)),
     auth,

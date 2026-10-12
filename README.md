@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. No hay frontend, empleados, asignaciones ni reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. No hay frontend ni reservas todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -218,7 +218,7 @@ erDiagram
 - La exclusion GiST con btree_gist impide citas solapadas del mismo empleado incluso con concurrencia. Intervalos `[inicio, fin)` permiten citas contiguas; solo CANCELLED libera el intervalo.
 - Indices por propietario, catalogos activos, agendas por cliente/negocio/empleado y fecha, estado/fecha y fecha global; reseñas por negocio/fecha; tokens por usuario, familia y expiracion.
 - Borrados restrictivos conservan historial; solo horarios y tokens dependientes usan cascada.
-- La logica futura debe validar propiedad, rol BUSINESS_OWNER del propietario, servicio y empleado activos, relacion EmployeeService, duracion e interseccion de horarios, transiciones de estado y citas completadas para reseñar. No se ha implementado esa logica todavia.
+- La API ya valida propiedad, estados activos e integridad de EmployeeService. Las futuras reservas deberan validar tambien la asignacion, duracion e interseccion de horarios, transiciones de estado y citas completadas para publicar valoraciones.
 
 ## Migraciones y seed
 
@@ -303,7 +303,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/services-management. No se implementan empleados, asignaciones ni reservas.
+La entrega actual incluye feature/employee-management. La API de horarios y las reservas quedan para tareas posteriores.
 
 ## Gestion de negocios
 
@@ -326,7 +326,7 @@ Un usuario puede tener varios negocios. El cliente no puede asignar ownerId, act
 
 DELETE establece active=false, conserva el historial y responde 204 tambien si ya estaba desactivado. El negocio deja de aparecer en listado y detalle publicos, incluso cuando quien consulta el detalle es el propietario. El propietario sigue viendolo en /me y puede editar sus datos descriptivos; PATCH no permite reactivarlo. Su rol permanece BUSINESS_OWNER tras desactivar todos los negocios.
 
-Los endpoints de servicios ya comprueban que el negocio esta activo. Las futuras operaciones de empleados y reservas tambien deberan hacerlo; BusinessService.getActive() ya centraliza la consulta que rechaza negocios inactivos. Esta entrega reutiliza el esquema existente, sin nuevas migraciones ni dependencias.
+Los endpoints de servicios ya comprueban que el negocio esta activo. Los endpoints de empleados tambien lo comprueban y las futuras reservas deberan hacerlo; BusinessService.getActive() ya centraliza la consulta que rechaza negocios inactivos. Esta entrega reutiliza el esquema existente, sin nuevas migraciones ni dependencias.
 
 ### Validacion, busqueda y paginacion
 
@@ -413,7 +413,7 @@ La comprobacion de propiedad se comparte con la gestion de negocios. Sin autenti
 
 Crear o editar en un negocio inactivo devuelve 409, incluida la reactivacion de servicios. Estas escrituras bloquean la fila del negocio dentro de una transaccion para que una desactivacion concurrente no permita saltarse la comprobacion de active. Las consultas publicas verifican tanto el estado del servicio como el de su negocio.
 
-DELETE conserva la fila y establece active=false. Devuelve 204 aunque el servicio ya estuviera desactivado; tambien se permite en un negocio inactivo para administrar su historial. /manage permanece disponible para el propietario en ambos casos. No se implementan reservas, empleados ni asignaciones en esta feature.
+DELETE conserva la fila y establece active=false. Devuelve 204 aunque el servicio ya estuviera desactivado; tambien se permite en un negocio inactivo para administrar su historial. /manage permanece disponible para el propietario en ambos casos. Las asignaciones a empleados se documentan en la seccion siguiente.
 
 ### Ejemplo en PowerShell
 
@@ -436,3 +436,50 @@ Invoke-RestMethod "$api/services/$serviceId" -Method Patch -Headers $headers -Co
 ```
 
 `npm run test:integration` ejecuta tambien la suite de servicios, en su propia base temporal. Comprueba catalogos vacios, permisos, campos protegidos, decimales exactos y sus limites, duraciones invalidas, edicion parcial, soft delete, reactivacion y ocultacion/bloqueo cuando el negocio esta inactivo.
+
+## Gestion de empleados y asignaciones
+
+| Metodo | Ruta                                           | Acceso y respuesta                                                  |
+| ------ | ---------------------------------------------- | ------------------------------------------------------------------- |
+| GET    | `/api/businesses/:businessId/employees`        | Publico; empleados activos de negocio activo, 200                   |
+| GET    | `/api/businesses/:businessId/employees/manage` | Propietario; todos los empleados y servicios asignados, 200         |
+| GET    | `/api/employees/:id`                           | Publico; empleado y negocio activos, incluye servicios activos, 200 |
+| POST   | `/api/businesses/:businessId/employees`        | Propietario de negocio activo; 201 y Location                       |
+| PATCH  | `/api/employees/:id`                           | Propietario de negocio activo; parcial, 200                         |
+| DELETE | `/api/employees/:id`                           | Propietario; desactivacion idempotente, 204                         |
+| GET    | `/api/employees/:id/services`                  | Publico; empleado, negocio y servicios activos, 200                 |
+| POST   | `/api/employees/:id/services/:serviceId`       | Propietario; asigna un servicio, 204                                |
+| DELETE | `/api/employees/:id/services/:serviceId`       | Propietario; quita solo la relacion, idempotente, 204               |
+
+Los listados usan `{ "data": [] }`; detalle, creacion y edicion usan `{ "data": {...} }`. El listado publico de empleados solo incluye id, firstName y lastName; el detalle agrega services. Nunca exponen email, phone, businessId ni auditoria del empleado. Los listados se ordenan por apellido, nombre e ID; servicios por nombre e ID. Los precios se mantienen como texto decimal de dos posiciones, por ejemplo `"8.10"`.
+
+POST exige firstName y lastName (recortados, 1-100 caracteres). email es opcional, se recorta, normaliza a minusculas y valida (maximo 254); phone admite 3-30 caracteres numericos, espacios y signos + ( ) . -. Ambos contactos aceptan null para borrarlos. active inicia en true. PATCH admite esos campos y active booleano, y exige al menos uno. Zod rechaza campos internos, relaciones, IDs en el body y UUID invalidos. Un Employee no necesita cuenta User ni tiene login.
+
+Se reutiliza assertBusinessOwner: sin sesion 401, usuario ajeno 403 incluso si es ADMIN, entidad inexistente 404. Un negocio o empleado inactivo devuelve 404 en las rutas publicas correspondientes. Crear, editar/reactivar o asignar en un negocio inactivo devuelve 409. El propietario puede seguir consultando /manage, desactivando empleados y quitando asignaciones con el negocio inactivo.
+
+EmployeeService usa la clave unica existente employeeId + serviceId y las claves foraneas compuestas con businessId. La capa de servicio exige el mismo negocio (400 si no coincide), empleado/servicio activos (409), existencia de ambos (404) y propiedad del negocio. Asignar una relacion existente devuelve 409, tambien con peticiones concurrentes. Las escrituras bloquean la fila Business dentro de la transaccion, igual que la gestion de servicios, para serializar las comprobaciones con las desactivaciones. No se cambiaron modelos ni migraciones.
+
+Desactivar empleados o servicios conserva sus filas y asignaciones. Reactivar un empleado vuelve a mostrar sus servicios activos; servicios inactivos permanecen solo en /manage. Quitar una asignacion elimina exclusivamente EmployeeService. La API de reservas futura debera volver a comprobar estos estados y la asignacion al reservar.
+
+### Ejemplo manual de empleados (PowerShell)
+
+Con `$session` del login, un negocio propio activo y `$serviceId` de un servicio activo creado en el ejemplo anterior:
+
+```powershell
+$api = 'http://localhost:3000/api'
+$headers = @{ Authorization = "Bearer $($session.accessToken)" }
+$body = @{ firstName = 'Carlos'; lastName = 'Mora'; email = 'carlos@example.com'; phone = '+593999999999' } | ConvertTo-Json
+$employee = Invoke-RestMethod "$api/businesses/$businessId/employees" -Method Post -Headers $headers -ContentType 'application/json' -Body $body
+$employeeId = $employee.data.id
+Invoke-RestMethod "$api/employees/$employeeId/services/$serviceId" -Method Post -Headers $headers
+Invoke-RestMethod "$api/businesses/$businessId/employees"
+Invoke-RestMethod "$api/businesses/$businessId/employees/manage" -Headers $headers
+Invoke-RestMethod "$api/employees/$employeeId"
+Invoke-RestMethod "$api/employees/$employeeId/services"
+Invoke-RestMethod "$api/employees/$employeeId" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"lastName":"Mora Lopez"}'
+Invoke-RestMethod "$api/employees/$employeeId" -Method Delete -Headers $headers
+Invoke-RestMethod "$api/employees/$employeeId" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"active":true}'
+Invoke-RestMethod "$api/employees/$employeeId/services/$serviceId" -Method Delete -Headers $headers
+```
+
+La suite `server/test/integration/employee.test.ts` prueba permisos, privacidad, validaciones, estados, reactivacion, asignaciones concurrentes, integridad entre negocios y borrado exclusivo de relaciones. `npm run test:integration` la ejecuta con PostgreSQL real en una base temporal aislada y aplica ambas migraciones existentes; tambien ejecuta las regresiones de autenticacion, negocios y servicios. Verificar con `npm run lint`, `npm run format:check`, `npm run build`, `npm test` y `npm run test:integration`.

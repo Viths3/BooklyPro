@@ -4,7 +4,7 @@ import type {
   UpdateServiceInput,
 } from '../schemas/service.schema.js';
 
-const serviceSelect = {
+export const serviceSelect = {
   id: true,
   name: true,
   description: true,
