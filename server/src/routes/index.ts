@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { getHealth } from '../controllers/health.controller.js';
+import {
+  createHealthController,
+  type DatabaseCheck,
+} from '../controllers/health.controller.js';
 
-export const apiRouter = Router();
-apiRouter.get('/health', getHealth);
+export function createApiRouter(checkDatabase: DatabaseCheck) {
+  const router = Router();
+  router.get('/health', createHealthController(checkDatabase));
+  return router;
+}
