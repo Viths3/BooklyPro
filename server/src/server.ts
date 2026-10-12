@@ -29,44 +29,74 @@ const availability = new AvailabilityService(
   new AvailabilityRepository(prisma),
   env.AVAILABILITY_SLOT_INTERVAL_MINUTES,
 );
-const app = createApp(checkDatabase, {
-  auth: createAuthRouter(auth),
-  availability: createAvailabilityRouter(availability),
-  appointments: createAppointmentRouter(
-    new AppointmentService(new AppointmentRepository(prisma), availability),
-    auth,
-  ),
-  schedules: createScheduleRouter(
-    new ScheduleService(new ScheduleRepository(prisma)),
-    auth,
-  ),
-  employees: createEmployeeRouter(
-    new EmployeeService(new EmployeeRepository(prisma)),
-    auth,
-  ),
-  services: createServiceRouter(
-    new ServiceService(new ServiceRepository(prisma)),
-    auth,
-  ),
-  businesses: createBusinessRouter(businesses, auth),
+const app = createApp(
+  checkDatabase,
+  {
+    auth: createAuthRouter(auth),
+    availability: createAvailabilityRouter(availability),
+    appointments: createAppointmentRouter(
+      new AppointmentService(new AppointmentRepository(prisma), availability),
+      auth,
+    ),
+    schedules: createScheduleRouter(
+      new ScheduleService(new ScheduleRepository(prisma)),
+      auth,
+    ),
+    employees: createEmployeeRouter(
+      new EmployeeService(new EmployeeRepository(prisma)),
+      auth,
+    ),
+    services: createServiceRouter(
+      new ServiceService(new ServiceRepository(prisma)),
+      auth,
+    ),
+    businesses: createBusinessRouter(businesses, auth),
+  },
+  { corsOrigins: env.CORS_ORIGINS, trustProxyHops: env.TRUST_PROXY_HOPS },
+);
+
+// Fail before accepting HTTP traffic if the database cannot be reached.
+try {
+  await checkDatabase();
+} catch {
+  console.error('Database connection failed during startup');
+  await prisma.$disconnect();
+  process.exit(1);
+}
+const server = app.listen(env.PORT, '0.0.0.0', () => {
+  console.info(
+    `BooklyPro API listening on 0.0.0.0:${env.PORT} (${env.NODE_ENV})`,
+  );
 });
-const server = app.listen(env.PORT, () => {
-  console.info(`BooklyPro API listening on port ${env.PORT}`);
+server.on('error', () => {
+  console.error('HTTP server failed');
+  void prisma.$disconnect().finally(() => process.exit(1));
 });
 
 let stopping = false;
 function shutdown() {
   if (stopping) return;
   stopping = true;
-  const timeout = setTimeout(() => process.exit(1), 10_000);
+  console.info('Shutting down BooklyPro API');
+  const timeout = setTimeout(() => {
+    console.error('Graceful shutdown timed out');
+    server.closeAllConnections();
+    void prisma.$disconnect().finally(() => process.exit(1));
+    setTimeout(() => process.exit(1), 1000).unref();
+  }, 10_000);
   timeout.unref();
-  server.close(() => {
+  server.close((error) => {
     void prisma
       .$disconnect()
       .then(() => {
         clearTimeout(timeout);
+        if (error) process.exitCode = 1;
+        console.info('HTTP server and database connections closed');
       })
-      .catch(() => process.exit(1));
+      .catch(() => {
+        console.error('Database shutdown failed');
+        process.exit(1);
+      });
   });
 }
 process.on('SIGINT', shutdown);
