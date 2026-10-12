@@ -1,3 +1,4 @@
+import { assertBusinessOwner } from '../utils/business-access.js';
 import type { BusinessRepository } from '../repositories/business.repository.js';
 import type {
   CreateBusinessInput,
@@ -33,12 +34,7 @@ export class BusinessService {
   }
   private async requireOwner(id: string, userId: string) {
     const business = await this.repository.findOwnership(id);
-    if (!business) throw new AppError(404, 'Business not found');
-    if (business.ownerId !== userId)
-      throw new AppError(
-        403,
-        'Only the business owner can perform this action',
-      );
+    assertBusinessOwner(business, userId);
   }
   async update(id: string, userId: string, input: UpdateBusinessInput) {
     await this.requireOwner(id, userId);

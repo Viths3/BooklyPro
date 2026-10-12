@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. No hay frontend ni gestion de servicios, empleados o reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. No hay frontend, empleados, asignaciones ni reservas todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -271,7 +271,7 @@ npm test
 npm run test:integration
 ```
 
-`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion y negocios, cada suite con una base separada. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
+`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion, negocios y servicios, cada suite con una base separada. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
 
 Cubre registro, duplicados, hashing, validacion y roles, login correcto/incorrecto, me, rotacion, replay, expiracion, logout idempotente, familias independientes, concurrencia, limites de intentos y health.
 
@@ -303,7 +303,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-Siguiente tarea: feature/services-management. No se inicia en esta entrega.
+La entrega actual incluye feature/services-management. No se implementan empleados, asignaciones ni reservas.
 
 ## Gestion de negocios
 
@@ -326,7 +326,7 @@ Un usuario puede tener varios negocios. El cliente no puede asignar ownerId, act
 
 DELETE establece active=false, conserva el historial y responde 204 tambien si ya estaba desactivado. El negocio deja de aparecer en listado y detalle publicos, incluso cuando quien consulta el detalle es el propietario. El propietario sigue viendolo en /me y puede editar sus datos descriptivos; PATCH no permite reactivarlo. Su rol permanece BUSINESS_OWNER tras desactivar todos los negocios.
 
-No se han creado endpoints de servicios, empleados o reservas. Esas futuras operaciones deberan verificar que el negocio esta activo; BusinessService.getActive() ya centraliza la consulta que rechaza negocios inactivos. Esta entrega reutiliza el esquema existente, sin nuevas migraciones ni dependencias.
+Los endpoints de servicios ya comprueban que el negocio esta activo. Las futuras operaciones de empleados y reservas tambien deberan hacerlo; BusinessService.getActive() ya centraliza la consulta que rechaza negocios inactivos. Esta entrega reutiliza el esquema existente, sin nuevas migraciones ni dependencias.
 
 ### Validacion, busqueda y paginacion
 
@@ -368,3 +368,71 @@ Invoke-RestMethod "$businessApi/me" -Headers $headers
 Tras DELETE, la consulta publica por ID devuelve 404; /me conserva el negocio con active=false. No usar un access token expirado: iniciar otra sesion o renovar con el refresh vigente.
 
 Las pruebas de integracion cubren los doce escenarios solicitados, inyeccion de campos protegidos, datos invalidos, busqueda literal, permisos de ADMIN, rollback del rol ante fallo y creacion concurrente. Ejecutarlas con `npm run test:integration`; la suite anterior de autenticacion tambien se ejecuta para detectar regresiones.
+
+## Servicios del negocio
+
+| Metodo | Endpoint                                      | Acceso y respuesta                                                      |
+| ------ | --------------------------------------------- | ----------------------------------------------------------------------- |
+| GET    | `/api/businesses/:businessId/services`        | Publico; 200 con servicios activos de un negocio activo                 |
+| GET    | `/api/services/:id`                           | Publico; 200 si servicio y negocio estan activos, 404 en caso contrario |
+| GET    | `/api/businesses/:businessId/services/manage` | Solo propietario; incluye servicios desactivados y negocios inactivos   |
+| POST   | `/api/businesses/:businessId/services`        | Solo propietario de negocio activo; 201 y cabecera Location             |
+| PATCH  | `/api/services/:id`                           | Solo propietario de negocio activo; actualizacion parcial, 200          |
+| DELETE | `/api/services/:id`                           | Solo propietario; desactivacion idempotente, 204                        |
+
+Los listados devuelven `{ "data": [] }` y se ordenan por nombre ascendente e ID como desempate. Un negocio activo sin servicios devuelve una lista vacia; un negocio inexistente o inactivo devuelve 404 en la ruta publica. El detalle, POST y PATCH devuelven `{ "data": { ... } }`. Ninguna respuesta contiene relaciones, ownerId, empleados ni datos del usuario propietario.
+
+### Precios, duracion y validacion
+
+POST exige name, price y durationMinutes. description es opcional y admite null. El nombre se recorta y debe tener entre 1 y 150 caracteres; description admite hasta 5000. active queda true y businessId procede exclusivamente de la URL.
+
+El precio acepta un numero JSON como `8` o un texto decimal como `"8.00"`. Para conservar exactamente el valor original, se recomienda enviar texto decimal. Se normaliza a texto sin operaciones aritmeticas de coma flotante y se persiste con `new Prisma.Decimal(...)` en Decimal(12,2). El rango permitido es de 0 a 9999999999.99, con hasta dos decimales. No se redondean entradas invalidas: valores negativos, decimales adicionales, exponentes en texto, null o booleanos devuelven 400.
+
+Todas las respuestas serializan el precio como texto con exactamente dos decimales:
+
+```json
+{
+  "data": {
+    "id": "UUID",
+    "name": "Corte de cabello",
+    "description": "Corte clasico",
+    "price": "8.00",
+    "durationMinutes": 30,
+    "active": true
+  }
+}
+```
+
+La duracion es un numero entero de 1 a 1440 minutos, consistente con el CHECK existente. Se rechazan 0, negativos, fracciones y textos como `"30"`. IDs deben ser UUID validos. No se necesitan cambios en el esquema ni migraciones nuevas.
+
+PATCH permite name, description, price, durationMinutes y active; exige al menos un campo y conserva los omitidos. No acepta id, businessId, ownerId, createdAt, updatedAt ni relaciones. POST tampoco admite active. `active: true` reactiva un servicio si el negocio sigue activo.
+
+### Autorizacion y desactivacion
+
+La comprobacion de propiedad se comparte con la gestion de negocios. Sin autenticacion: 401; usuario ajeno (incluido ADMIN): 403; entidad inexistente: 404. El propietario no se obtiene del body.
+
+Crear o editar en un negocio inactivo devuelve 409, incluida la reactivacion de servicios. Estas escrituras bloquean la fila del negocio dentro de una transaccion para que una desactivacion concurrente no permita saltarse la comprobacion de active. Las consultas publicas verifican tanto el estado del servicio como el de su negocio.
+
+DELETE conserva la fila y establece active=false. Devuelve 204 aunque el servicio ya estuviera desactivado; tambien se permite en un negocio inactivo para administrar su historial. /manage permanece disponible para el propietario en ambos casos. No se implementan reservas, empleados ni asignaciones en esta feature.
+
+### Ejemplo en PowerShell
+
+Usar un negocio activo propio y un access token vigente obtenido mediante login:
+
+```powershell
+$api = 'http://localhost:3000/api'
+$headers = @{ Authorization = "Bearer $($session.accessToken)" }
+$businessId = 'UUID_DEL_NEGOCIO'
+$body = @{ name = 'Corte de cabello'; description = 'Corte clasico'; price = '8.00'; durationMinutes = 30 } | ConvertTo-Json
+$createdService = Invoke-RestMethod "$api/businesses/$businessId/services" -Method Post -Headers $headers -ContentType 'application/json' -Body $body
+$serviceId = $createdService.data.id
+Invoke-RestMethod "$api/businesses/$businessId/services"
+Invoke-RestMethod "$api/services/$serviceId"
+Invoke-RestMethod "$api/businesses/$businessId/services/manage" -Headers $headers
+$patch = @{ price = '9.50'; durationMinutes = 45 } | ConvertTo-Json
+Invoke-RestMethod "$api/services/$serviceId" -Method Patch -Headers $headers -ContentType 'application/json' -Body $patch
+Invoke-RestMethod "$api/services/$serviceId" -Method Delete -Headers $headers
+Invoke-RestMethod "$api/services/$serviceId" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"active":true}'
+```
+
+`npm run test:integration` ejecuta tambien la suite de servicios, en su propia base temporal. Comprueba catalogos vacios, permisos, campos protegidos, decimales exactos y sus limites, duraciones invalidas, edicion parcial, soft delete, reactivacion y ocultacion/bloqueo cuando el negocio esta inactivo.
