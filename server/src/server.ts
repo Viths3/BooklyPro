@@ -1,3 +1,6 @@
+import { AvailabilityRepository } from './repositories/availability.repository.js';
+import { AvailabilityService } from './services/availability.service.js';
+import { createAvailabilityRouter } from './routes/availability.routes.js';
 import { ScheduleRepository } from './repositories/schedule.repository.js';
 import { ScheduleService } from './services/schedule.service.js';
 import { createScheduleRouter } from './routes/schedule.routes.js';
@@ -21,6 +24,12 @@ const auth = new AuthService(new AuthRepository(prisma));
 const businesses = new BusinessService(new BusinessRepository(prisma));
 const app = createApp(checkDatabase, {
   auth: createAuthRouter(auth),
+  availability: createAvailabilityRouter(
+    new AvailabilityService(
+      new AvailabilityRepository(prisma),
+      env.AVAILABILITY_SLOT_INTERVAL_MINUTES,
+    ),
+  ),
   schedules: createScheduleRouter(
     new ScheduleService(new ScheduleRepository(prisma)),
     auth,

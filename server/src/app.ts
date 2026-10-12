@@ -12,6 +12,7 @@ export function createApp(
     services?: Router;
     employees?: Router;
     schedules?: Router;
+    availability?: Router;
   } = {},
 ) {
   const app = express();
@@ -22,6 +23,7 @@ export function createApp(
   if (routers.services) app.use('/api', routers.services);
   if (routers.employees) app.use('/api', routers.employees);
   if (routers.schedules) app.use('/api', routers.schedules);
+  if (routers.availability) app.use('/api', routers.availability);
   app.use('/api', createApiRouter(checkDatabase));
   app.use((_req, _res, next) => next(new AppError(404, 'Route not found')));
   app.use(errorHandler);

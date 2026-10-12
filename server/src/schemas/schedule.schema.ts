@@ -1,3 +1,4 @@
+import { timeToMinutes as minutes } from '../utils/time.js';
 import { z } from 'zod';
 import { DayOfWeek } from '../generated/prisma/enums.js';
 export const weekDays = [
@@ -24,10 +25,7 @@ const time = z
     /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/,
     'Use HH:mm between 00:00 and 23:59',
   );
-export function minutes(time: string) {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours! * 60 + minutes!;
-}
+
 const businessFields = z.strictObject({
   openingTime: time,
   closingTime: time,
