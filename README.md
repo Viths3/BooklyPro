@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. No hay frontend ni creacion de reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. Las reservas permiten crear citas, consultar historial, cancelar y gestionar estados. No hay frontend todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -77,10 +77,16 @@ docker compose exec postgres pg_isready -U booklypro -d booklypro
 `GET http://localhost:3000/api/health` ejecuta `SELECT 1` mediante Prisma en cada peticion:
 
 ```json
-{ "status": "ok", "service": "booklypro-api", "database": "connected" }
+{
+  "data": {
+    "status": "ok",
+    "service": "booklypro-api",
+    "database": "connected"
+  }
+}
 ```
 
-Devuelve HTTP 200 si PostgreSQL responde; en caso contrario HTTP 503 con `status: "error"` y `database: "disconnected"`, sin detalles internos. El servidor puede arrancar sin conexion a PostgreSQL para informar del fallo. El adaptador limita a tres segundos cada espera de conexion y consulta. No necesita tablas para ejecutar el health check.
+Devuelve HTTP 200 si PostgreSQL responde; en caso contrario HTTP 503 con `error.code: "DATABASE_UNAVAILABLE"` y `error.message`, sin detalles internos. El servidor puede arrancar sin conexion a PostgreSQL para informar del fallo. El adaptador limita a tres segundos cada espera de conexion y consulta. No necesita tablas para ejecutar el health check.
 
 Para comprobar una caida local, mantener la API encendida, ejecutar `docker compose stop postgres` y consultar el endpoint; debe responder 503. Restaurar con `docker compose up -d --wait`; debe volver a responder 200. `docker compose down` detiene PostgreSQL sin borrar su volumen persistente.
 
@@ -100,17 +106,19 @@ Login devuelve:
 
 ```json
 {
-  "user": {
-    "id": "UUID",
-    "firstName": "Juan",
-    "lastName": "Guaman",
-    "email": "juan@example.com",
-    "role": "CUSTOMER"
-  },
-  "accessToken": "ACCESS_TOKEN",
-  "refreshToken": "REFRESH_TOKEN",
-  "tokenType": "Bearer",
-  "expiresIn": 900
+  "data": {
+    "user": {
+      "id": "UUID",
+      "firstName": "Juan",
+      "lastName": "Guaman",
+      "email": "juan@example.com",
+      "role": "CUSTOMER"
+    },
+    "accessToken": "ACCESS_TOKEN",
+    "refreshToken": "REFRESH_TOKEN",
+    "tokenType": "Bearer",
+    "expiresIn": 900
+  }
 }
 ```
 
@@ -125,10 +133,10 @@ $api = 'http://localhost:3000/api/auth'
 $registration = @{ firstName = 'Juan'; lastName = 'Guaman'; email = 'juan@example.com'; password = 'Password123!' } | ConvertTo-Json
 Invoke-RestMethod "$api/register" -Method Post -ContentType 'application/json' -Body $registration
 $credentials = @{ email = 'juan@example.com'; password = 'Password123!' } | ConvertTo-Json
-$session = Invoke-RestMethod "$api/login" -Method Post -ContentType 'application/json' -Body $credentials
+$session = (Invoke-RestMethod "$api/login" -Method Post -ContentType 'application/json' -Body $credentials).data
 Invoke-RestMethod "$api/me" -Headers @{ Authorization = "Bearer $($session.accessToken)" }
 $refreshBody = @{ refreshToken = $session.refreshToken } | ConvertTo-Json
-$session = Invoke-RestMethod "$api/refresh" -Method Post -ContentType 'application/json' -Body $refreshBody
+$session = (Invoke-RestMethod "$api/refresh" -Method Post -ContentType 'application/json' -Body $refreshBody).data
 $logoutBody = @{ refreshToken = $session.refreshToken } | ConvertTo-Json
 Invoke-RestMethod "$api/logout" -Method Post -ContentType 'application/json' -Body $logoutBody
 ```
@@ -157,7 +165,7 @@ curl -X POST http://localhost:3000/api/auth/logout -H 'Content-Type: application
 - Login usa el mismo error para email inexistente o clave incorrecta y hace una comparacion bcrypt tambien cuando no encuentra usuario. Registro devuelve 409 para duplicados por requisito de la API: ese endpoint permite inferir que un email existe.
 - Limites por IP en memoria: registro/login comparten 20 intentos por 15 minutos; refresh/logout comparten 60 por minuto. Devuelven 429. Antes de desplegar multiples instancias se requiere almacenamiento compartido; configurar proxies de confianza solo conociendo la topologia real.
 - Los tokens se transportan en JSON y el acceso mediante Authorization, sin cookies ni almacenamiento frontend en esta fase. Para un despliegue real se requiere HTTPS y definir la estrategia de almacenamiento del futuro cliente. No guardar tokens en logs ni URLs.
-- Validacion fallida: 400; credenciales/token invalido: 401; rol insuficiente: 403; email duplicado: 409. Los errores mantienen `{ "error": { "message": "..." } }`; los de Zod pueden incluir nombres de campos, nunca valores sensibles.
+- Validacion fallida: 400; credenciales/token invalido: 401; rol insuficiente: 403; email duplicado: 409. Los errores mantienen `{ "error": { "code": "...", "message": "..." } }`; Zod incluye details con campo y mensaje. Consultar [convenciones de API](docs/api-conventions.md).
 
 Referencias: [bcrypt y limite de 72 bytes](https://github.com/kelektiv/node.bcrypt.js/), [verificacion de JWT](https://github.com/auth0/node-jsonwebtoken), [configuracion Prisma 7](https://www.prisma.io/docs/orm/v7/reference/prisma-config-reference).
 
@@ -303,7 +311,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/availability. La creacion y gestion de reservas queda para feature/appointments.
+La entrega actual incluye feature/appointments. La siguiente tarea sera feature/reviews.
 
 ## Gestion de negocios
 
@@ -540,7 +548,7 @@ Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -
 Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"closingTime":"16:00"}'
 ```
 
-`server/test/integration/schedule.test.ts` prueba ambos tipos de horario, privacidad, ownership, validacion estricta, dias cerrados, limites del negocio, PATCH parcial, reemplazo y vaciado semanal, conflictos, concurrencia y rollback ante un fallo de base de datos despues del borrado. Se ejecuta con `npm run test:integration` junto con las regresiones existentes y aplica las migraciones sobre bases temporales aisladas. La disponibilidad tiene su propia suite; la creacion de reservas sigue pendiente.
+`server/test/integration/schedule.test.ts` prueba ambos tipos de horario, privacidad, ownership, validacion estricta, dias cerrados, limites del negocio, PATCH parcial, reemplazo y vaciado semanal, conflictos, concurrencia y rollback ante un fallo de base de datos despues del borrado. Se ejecuta con `npm run test:integration` junto con las regresiones existentes y aplica las migraciones sobre bases temporales aisladas. Disponibilidad y reservas tienen sus propias suites.
 
 ## Consulta de disponibilidad
 
@@ -602,8 +610,52 @@ Para hoy se descartan candidatos cuyo inicio sea anterior al instante actual, in
 | Horarios inconsistentes o timezone persistido invalido                            | 409                 |
 | Dia cerrado, sin horario, servicio que no cabe o todos los slots ocupados/pasados | 200 con slots vacio |
 
-La consulta es una fotografia de disponibilidad: **no reserva el horario**. La futura feature/appointments debera volver a validar y crear la reserva atomicamente, apoyandose en la exclusion PostgreSQL. Esta feature no incorpora rutas de escritura de citas.
+La consulta es una fotografia de disponibilidad: **no reserva el horario**. POST /api/appointments vuelve a validar y crea la reserva atomicamente, apoyandose en la exclusion PostgreSQL.
 
 ### Pruebas de disponibilidad
 
 `npm test` incluye las pruebas unitarias de slots, limites, instantes, zonas con offsets fraccionarios y cambios DST. `npm run test:integration` incluye disponibilidad con reloj inyectado y PostgreSQL real, mas autenticacion, negocios, servicios, empleados y horarios; cada suite usa una base temporal y aplica las cuatro migraciones. Se prueban los estados de citas, solapamientos parciales, contiguedad, medianoche, entidades inactivas, pertenencia, asignaciones, validacion, hoy/fechas pasadas y consistencia de la exclusion SQL.
+
+## Reservas y gestion de citas
+
+El contrato completo, formatos globales, filtros y politica de estados estan en [docs/api-conventions.md](docs/api-conventions.md). **Cambio de contrato:** autenticacion y health ahora envuelven sus respuestas en data; errores incluyen code/message y validacion usa details. Los ejemplos de login anteriores ya extraen .data.
+
+| Metodo | Endpoint                                   | Acceso                                |
+| ------ | ------------------------------------------ | ------------------------------------- |
+| POST   | `/api/appointments`                        | Autenticado; crea PENDING, 201        |
+| GET    | `/api/appointments/me`                     | Citas propias, paginado               |
+| GET    | `/api/appointments/:id`                    | Cliente o propietario                 |
+| PATCH  | `/api/appointments/:id/cancel`             | Cliente; cancelacion idempotente      |
+| GET    | `/api/businesses/:businessId/appointments` | Propietario; paginado                 |
+| PATCH  | `/api/appointments/:id/status`             | Propietario; transiciones controladas |
+
+POST toma customerId de la sesion y acepta businessId, serviceId, employeeId, date, startTime y notes opcional (maximo 500). Revalida disponibilidad en la misma transaccion de insercion; calcula endTime y conserva priceAtBooking. Las fechas se interpretan en Business.timeZone y se responden en UTC ISO 8601. Los precios son strings con dos decimales. No hay bypass ADMIN.
+
+PENDING permite CONFIRMED/CANCELLED; CONFIRMED permite COMPLETED/CANCELLED/NO_SHOW. Los demas son finales. El cliente solo cancela PENDING/CONFIRMED; repetir CANCELLED por /cancel devuelve 200. El propietario usa /status; confirmar una CONFIRMED es idempotente. No hay anticipacion minima para cancelar ni borrado de citas.
+
+El bloqueo transaccional de Business coordina creacion con cambios de horarios, empleados y servicios. La exclusion GiST existente impide solapamientos de PENDING/CONFIRMED incluso con concurrencia o escrituras directas. Los cambios de estado bloquean Appointment. Los conflictos devuelven 409 con codigo estable. No se necesita migracion nueva ni otra dependencia en esta feature.
+
+/me acepta status, from, to, page y limit. El listado del negocio tambien date, employeeId y serviceId. from/to son ISO 8601 con Z/offset y rango [from,to); date usa el dia local del negocio y no se combina con from/to. Se filtra el inicio de cita. Orden ascendente por inicio e ID; limit por defecto 20, maximo 100. El historial sigue accesible con entidades desactivadas.
+
+### Ejemplo manual (PowerShell)
+
+Con negocio, empleado y servicio activos y asignados, y horarios configurados; usar una fecha local vigente. Customer y ownerSession son los datos .data de los respectivos logins:
+
+```powershell
+$api = 'http://localhost:3000/api'
+$customerHeaders = @{ Authorization = "Bearer $($customer.accessToken)" }
+$ownerHeaders = @{ Authorization = "Bearer $($ownerSession.accessToken)" }
+$date = '2030-01-07'
+$availability = Invoke-RestMethod "$api/availability?businessId=$businessId&serviceId=$serviceId&employeeId=$employeeId&date=$date"
+if ($availability.data.slots.Count -eq 0) { throw 'No hay horarios disponibles' }
+$body = @{ businessId = $businessId; serviceId = $serviceId; employeeId = $employeeId; date = $date; startTime = $availability.data.slots[0].startTime; notes = 'Primera visita' } | ConvertTo-Json
+$appointment = (Invoke-RestMethod "$api/appointments" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body $body).data
+$appointmentId = $appointment.id
+Invoke-RestMethod "$api/appointments/me?page=1&limit=10" -Headers $customerHeaders
+Invoke-RestMethod "$api/appointments/$appointmentId" -Headers $customerHeaders
+Invoke-RestMethod "$api/businesses/$businessId/appointments?date=$date" -Headers $ownerHeaders
+Invoke-RestMethod "$api/appointments/$appointmentId/status" -Method Patch -Headers $ownerHeaders -ContentType 'application/json' -Body '{"status":"CONFIRMED"}'
+Invoke-RestMethod "$api/appointments/$appointmentId/cancel" -Method Patch -Headers $customerHeaders
+```
+
+La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas. No se inicia feature/reviews.
