@@ -106,7 +106,7 @@ BooklyPro/
 ## Modelo y decisiones
 
 - Diez entidades: User, Business, Employee, Service, EmployeeService, BusinessSchedule, EmployeeSchedule, Appointment, Review y RefreshToken.
-- UUID como identificadores; roles `CUSTOMER` y `BUSINESS_OWNER`. Un propietario tiene varios negocios. Los empleados son recursos del negocio, no usuarios con acceso propio.
+- UUID como identificadores; roles `CUSTOMER`, `BUSINESS_OWNER` y `ADMIN`. Un propietario tiene varios negocios. Los empleados son recursos del negocio, no usuarios con acceso propio.
 - Claves compuestas garantizan que empleados, servicios y citas pertenezcan al mismo negocio; cada reseña coincide con el cliente y negocio de su cita y solo existe una por cita.
 - Dinero con `Decimal(12,2)`, moneda ISO de tres letras por negocio y precio acordado en la cita. Cambiar el precio del servicio no modifica el historial.
 - Fechas absolutas con `timestamptz`; zona IANA por negocio, inicialmente `America/Guayaquil`. La futura capa de reservas convertirá horario local a instantes UTC.
@@ -241,3 +241,77 @@ npm run dev
 El script `predev` genera autom?ticamente el cliente Prisma. Para instalaciones reproducibles se recomienda `npm ci` desde la ra?z, usando el lockfile del monorepo. Para generar el cliente manualmente: `npm run db:generate` desde la ra?z o desde `server/`.
 
 Para comprobar una ca?da en tu entorno local, mant?n la API encendida, ejecuta `docker compose stop postgres` y consulta `/api/health`: debe responder 503. Despu?s ejecuta `docker compose up -d --wait` y repite la consulta: debe volver a responder 200. La parada afecta a las conexiones locales al contenedor; no borra el volumen.
+
+## Esquema relacional completo
+
+La migraci?n incremental `20261012170000_complete_core_schema` completa el esquema existente sin reescribir la primera migraci?n. A?ade `Role.ADMIN`, `Business.active`, `DayOfWeek`, auditor?a de horarios/rese?as e ?ndices de agenda. Convierte domingo=0 a `SUNDAY` y los dem?s d?as de forma expl?cita; renombra las horas del empleado sin perder datos. Para registros anteriores, las fechas de auditor?a de horarios comienzan en la migraci?n; las rese?as toman su `createdAt` como `updatedAt` inicial. Despu?s Prisma mantiene `updatedAt` (las escrituras SQL directas deben proporcionarlo).
+
+```mermaid
+erDiagram
+  User ||--o{ Business : owns
+  User ||--o{ Appointment : books
+  User ||--o{ Review : writes
+  User ||--o{ RefreshToken : has
+  Business ||--o{ Employee : employs
+  Business ||--o{ Service : offers
+  Business ||--o{ BusinessSchedule : opens
+  Business ||--o{ Appointment : receives
+  Business ||--o{ Review : receives
+  Employee ||--o{ EmployeeSchedule : works
+  Employee ||--o{ EmployeeService : performs
+  Service ||--o{ EmployeeService : assigned
+  Employee ||--o{ Appointment : attends
+  Service ||--o{ Appointment : booked
+  Appointment ||--o| Review : receives
+```
+
+### ?ndices y restricciones
+
+- Email ?nico (normalizado en min?sculas); UUID consistentes en claves primarias y for?neas.
+- ?ndices de negocio por propietario y por `active, name` para listado ordenado. Este ?ltimo no es b?squeda de texto completo.
+- Empleados y servicios por `businessId, active`.
+- Citas por cliente/fecha, negocio/fecha, empleado/fecha y estado/fecha. Un ?ndice de fecha permite consultas cronol?gicas globales sin exigir una entidad o estado concreto; no se a?ade otro ?ndice simple de estado porque ya lo cubre el compuesto.
+- Rese?as por negocio/fecha y cliente; una ?nica rese?a por cita. La clave compuesta adicional permite a Prisma expresar que coincida tambi?n su cliente y negocio.
+- Tokens por usuario, familia y expiraci?n; solo se almacena el hash, nunca el token original.
+- Claves compuestas impiden mezclar servicios, empleados y citas de negocios diferentes. La redundancia controlada de `businessId` permite que PostgreSQL garantice esa integridad.
+- Un horario por negocio/d?a y empleado/d?a. El enum restringe los d?as y los CHECK validan minutos de 0 a 1440 con inicio menor que fin.
+- CHECK existentes: rating 1?5, precio no negativo, duraci?n de 1 a 1440 minutos, fin de cita posterior al inicio, formato y vigencia de tokens y moneda de tres letras.
+- Se conserva la exclusi?n GiST con `btree_gist` de la primera migraci?n: protege contra solapamientos concurrentes sin implementar a?n el motor de disponibilidad.
+- Borrados restringidos para conservar historial. Cascada ?nicamente en horarios dependientes y tokens, que no tienen sentido sin su entidad propietaria.
+
+El rol del propietario, la pertenencia del cliente autenticado, que una rese?a corresponda a una cita completada y la disponibilidad dentro de horarios se validar?n en la futura capa de negocio. No se a?aden triggers para implementar esa l?gica en esta fase.
+
+### Migraciones y seed
+
+Desde la ra?z y con los dos archivos `.env` configurados:
+
+```sh
+docker compose up -d --wait
+npm run db:validate
+npm run db:generate
+npm run db:deploy
+npm run db:seed
+```
+
+El seed solo permite `NODE_ENV=development`. Usa una transacci?n y upserts: repetirlo conserva los datos existentes y no duplica filas. Crea:
+
+- Propietaria Ana Demo (`owner@booklypro.example`) y cliente Luis Demo (`customer@booklypro.example`).
+- BooklyPro Barber?a Demo, moneda USD y zona America/Guayaquil.
+- Corte de cabello: USD 15, 30 minutos; arreglo de barba: USD 8, 20 minutos.
+- Empleado Carlos Demo, asignado a ambos servicios.
+- Horario de negocio lunes?viernes 09:00?18:00 y de empleado 09:00?17:00.
+
+No crea citas, rese?as ni refresh tokens. No hay contrase?a p?blica de prueba: el seed genera credenciales aleatorias, guarda un hash scrypt con salt y descarta el valor original. No implementa login. Los UUID fijos de las fixtures de negocio, empleado y servicios est?n reservados para este seed; si los datos existentes entran en conflicto, la transacci?n falla en vez de sobrescribirlos.
+
+### Reset exclusivo de desarrollo
+
+**El siguiente comando elimina todos los datos locales del esquema configurado en DATABASE_URL.** Comprueba que apunta a la base de desarrollo antes de ejecutarlo; no usar en producci?n. No es necesario para aplicar esta migraci?n incremental.
+
+```sh
+cd server
+npx prisma migrate reset
+npx prisma generate
+npx prisma db seed
+```
+
+El reset vuelve a aplicar el historial de migraciones; el seed se ejecuta expl?citamente. No se ha reseteado la base existente durante esta tarea.
