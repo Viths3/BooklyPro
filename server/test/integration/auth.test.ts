@@ -35,7 +35,7 @@ router.get(
   (_req, res) => res.json({ allowed: true }),
 );
 router.get('/test-no-auth', authorizeRoles('ADMIN'), (_req, res) => res.end());
-const app = createApp(checkDatabase, router);
+const app = createApp(checkDatabase, { auth: router });
 const server = app.listen(0, '127.0.0.1');
 let baseUrl: string;
 const password = 'Password123!';
