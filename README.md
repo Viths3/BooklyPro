@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. No hay frontend ni reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. No hay frontend ni reservas todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -271,7 +271,7 @@ npm test
 npm run test:integration
 ```
 
-`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion, negocios y servicios, cada suite con una base separada. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
+`npm test` usa node:test y tsx para pruebas HTTP sin base de datos. `test:integration` requiere el contenedor PostgreSQL iniciado y la configuracion de la raiz `.env`: crea una base aleatoria booklypro_test_*, aplica las migraciones y ejecuta pruebas HTTP reales de autenticacion, negocios, servicios, empleados y horarios, cada suite con una base separada. Usa secretos JWT efimeros y elimina solo esa base al terminar; no utiliza ni limpia la base de desarrollo/produccion.
 
 Cubre registro, duplicados, hashing, validacion y roles, login correcto/incorrecto, me, rotacion, replay, expiracion, logout idempotente, familias independientes, concurrencia, limites de intentos y health.
 
@@ -303,7 +303,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/employee-management. La API de horarios y las reservas quedan para tareas posteriores.
+La entrega actual incluye feature/schedules. El calculo de disponibilidad y las reservas quedan para tareas posteriores.
 
 ## Gestion de negocios
 
@@ -482,4 +482,62 @@ Invoke-RestMethod "$api/employees/$employeeId" -Method Patch -Headers $headers -
 Invoke-RestMethod "$api/employees/$employeeId/services/$serviceId" -Method Delete -Headers $headers
 ```
 
-La suite `server/test/integration/employee.test.ts` prueba permisos, privacidad, validaciones, estados, reactivacion, asignaciones concurrentes, integridad entre negocios y borrado exclusivo de relaciones. `npm run test:integration` la ejecuta con PostgreSQL real en una base temporal aislada y aplica ambas migraciones existentes; tambien ejecuta las regresiones de autenticacion, negocios y servicios. Verificar con `npm run lint`, `npm run format:check`, `npm run build`, `npm test` y `npm run test:integration`.
+La suite `server/test/integration/employee.test.ts` prueba permisos, privacidad, validaciones, estados, reactivacion, asignaciones concurrentes, integridad entre negocios y borrado exclusivo de relaciones. `npm run test:integration` la ejecuta con PostgreSQL real en una base temporal aislada y aplica las migraciones existentes; tambien ejecuta las regresiones de autenticacion, negocios y servicios. Verificar con `npm run lint`, `npm run format:check`, `npm run build`, `npm test` y `npm run test:integration`.
+
+## Horarios de negocios y empleados
+
+| Metodo | Ruta                                               | Acceso                                               |
+| ------ | -------------------------------------------------- | ---------------------------------------------------- |
+| GET    | `/api/businesses/:businessId/schedules`            | Publico, negocio activo                              |
+| PUT    | `/api/businesses/:businessId/schedules`            | Propietario, reemplaza semana completa               |
+| PATCH  | `/api/businesses/:businessId/schedules/:dayOfWeek` | Propietario, modifica un dia configurado             |
+| GET    | `/api/employees/:employeeId/schedules`             | Publico, empleado y negocio activos                  |
+| PUT    | `/api/employees/:employeeId/schedules`             | Propietario del negocio, reemplaza semana completa   |
+| PATCH  | `/api/employees/:employeeId/schedules/:dayOfWeek`  | Propietario del negocio, modifica un dia configurado |
+
+Todas las respuestas exitosas son 200 con `{ "data": [...] }`, incluida la semana resultante de PUT/PATCH. El orden es MONDAY a SUNDAY. Se devuelven exclusivamente dayOfWeek, las dos horas y active; se incluyen los dias cerrados configurados. Una entidad activa sin configuracion devuelve una lista vacia. Negocio inexistente/inactivo o empleado inexistente/inactivo en consultas publicas: 404.
+
+PUT recibe `{ "schedules": [...] }` con 0-7 dias unicos. **Reemplaza la semana:** los dias omitidos se eliminan y se consideran sin horario/no laborables; una lista vacia elimina la configuracion si no hay conflictos. PATCH es parcial, exige al menos un campo y valida el intervalo completo combinado con los valores almacenados; no crea dias inexistentes (404, configurar antes mediante PUT). Campos desconocidos, IDs internos y dayOfWeek dentro del body de PATCH se rechazan.
+
+Las horas de entrada usan HH:mm exacto, de 00:00 a 23:59. No se aceptan `9:00`, `24:00`, `25:00`, `12:75`, segundos ni minutos numericos. Se almacenan como enteros de minutos desde medianoche, sin conversion UTC ni uso de Date. Horarios activos exigen openingTime < closingTime o startTime < endTime. No hay turnos nocturnos ni varios intervalos por dia. En dias inactivos no se exige orden; se puede conservar el intervalo anterior o enviar 00:00-00:00.
+
+La migracion **20261012200000_inactive_schedule_intervals** ajusta unicamente los CHECK de ambas tablas para permitir intervalos iguales en dias inactivos, manteniendo limites numericos y el orden obligatorio en dias activos. No cambia schema.prisma ni migraciones anteriores: estos CHECK se expresan en SQL. Conserva el limite historico de fin de dia 1440 en la base para no invalidar filas anteriores; si existieran, las respuestas muestran ese extremo como 24:00, aunque las nuevas entradas de la API llegan hasta 23:59. Aplicar con `npm run db:deploy` antes de usar las nuevas rutas.
+
+Se reutiliza **Business.timeZone**, ya existente con valor IANA por defecto America/Guayaquil. Las horas representan la hora local del negocio. No se agrega otro campo ni una migracion de timezone; la conversion de fechas y el calculo de disponibilidad quedan para la siguiente feature.
+
+### Propiedad, conflictos y transacciones
+
+Se comparte assertBusinessOwner: 401 sin autenticacion y 403 para usuarios ajenos, tambien ADMIN. Solo el propietario puede modificar horarios. Los cambios requieren negocio activo (409 si no lo esta). Se permite al propietario corregir horarios de empleados inactivos antes de reactivarlos, aunque sus GET publicos devuelvan 404.
+
+Cada dia laboral del empleado debe tener un dia activo del negocio con apertura <= inicio < fin <= cierre. Un dia ausente del negocio equivale a cerrado. Los conflictos entre horarios devuelven **409**. Reducir, cerrar o eliminar un dia del negocio que deje empleados fuera de rango devuelve `Business schedule conflicts with existing employee schedules`; no se ajustan empleados silenciosamente. Tambien se revisan horarios activos conservados de empleados desactivados: primero corregir sus horarios y despues cambiar el negocio. Un intervalo individual invalido devuelve 400.
+
+PUT y PATCH comprueban y escriben dentro de una transaccion Prisma que bloquea la fila Business con FOR UPDATE. El mismo bloqueo coordina cambios de negocio, de empleados y de horarios concurrentes. PUT elimina y recrea los registros semanales atomicamente; no mantiene los IDs internos del horario, que no se exponen en esta API. PATCH mantiene el registro del dia. Las claves unicas existentes businessId + dayOfWeek y employeeId + dayOfWeek siguen evitando duplicados. Si una escritura falla, toda la transaccion se revierte.
+
+### Ejemplo manual de horarios (PowerShell)
+
+Usar el token de login, un negocio activo propio y un empleado de ese negocio de los ejemplos anteriores:
+
+```powershell
+$api = 'http://localhost:3000/api'
+$headers = @{ Authorization = "Bearer $($session.accessToken)" }
+$businessWeek = @{ schedules = @(
+  @{ dayOfWeek = 'MONDAY'; openingTime = '09:00'; closingTime = '18:00'; active = $true }
+  @{ dayOfWeek = 'TUESDAY'; openingTime = '09:00'; closingTime = '18:00'; active = $true }
+  @{ dayOfWeek = 'WEDNESDAY'; openingTime = '00:00'; closingTime = '00:00'; active = $false }
+) } | ConvertTo-Json -Depth 4
+Invoke-RestMethod "$api/businesses/$businessId/schedules" -Method Put -Headers $headers -ContentType 'application/json' -Body $businessWeek
+$employeeWeek = @{ schedules = @(
+  @{ dayOfWeek = 'MONDAY'; startTime = '10:00'; endTime = '17:00'; active = $true }
+  @{ dayOfWeek = 'TUESDAY'; startTime = '09:00'; endTime = '15:00'; active = $true }
+  @{ dayOfWeek = 'WEDNESDAY'; startTime = '00:00'; endTime = '00:00'; active = $false }
+) } | ConvertTo-Json -Depth 4
+Invoke-RestMethod "$api/employees/$employeeId/schedules" -Method Put -Headers $headers -ContentType 'application/json' -Body $employeeWeek
+Invoke-RestMethod "$api/businesses/$businessId/schedules"
+Invoke-RestMethod "$api/employees/$employeeId/schedules"
+Invoke-RestMethod "$api/employees/$employeeId/schedules/MONDAY" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"startTime":"11:00"}'
+Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"openingTime":"10:00"}'
+# Devuelve 409: Carlos aun trabaja hasta las 17:00.
+Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"closingTime":"16:00"}'
+```
+
+`server/test/integration/schedule.test.ts` prueba ambos tipos de horario, privacidad, ownership, validacion estricta, dias cerrados, limites del negocio, PATCH parcial, reemplazo y vaciado semanal, conflictos, concurrencia y rollback ante un fallo de base de datos despues del borrado. Se ejecuta con `npm run test:integration` junto con las regresiones existentes y aplica las tres migraciones sobre bases temporales aisladas. No implementa reservas ni disponibilidad.
