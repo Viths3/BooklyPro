@@ -1,8 +1,8 @@
-import { app } from './app.js';
+import { createApp } from './app.js';
 import { env } from './config/env.js';
-import { prisma } from './config/database.js';
+import { prisma, checkDatabase } from './config/prisma.js';
 
-await prisma.$connect();
+const app = createApp(checkDatabase);
 const server = app.listen(env.PORT, () => {
   console.info(`BooklyPro API listening on port ${env.PORT}`);
 });
