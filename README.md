@@ -29,7 +29,6 @@ Copy-Item server/.env.example server/.env
 npm ci
 docker compose up -d --wait
 npm run db:generate
-npm run db:deploy
 npm run dev
 ```
 
@@ -42,7 +41,7 @@ Invoke-RestMethod http://localhost:3000/api/health
 Respuesta:
 
 ```json
-{ "status": "ok", "service": "booklypro-api" }
+{ "status": "ok", "service": "booklypro-api", "database": "connected" }
 ```
 
 Es un endpoint de liveness: comprueba que el proceso HTTP responde, no consulta PostgreSQL en cada petición. El servidor sí exige conexión a PostgreSQL durante el arranque.
@@ -154,7 +153,7 @@ Las pruebas HTTP verifican health, 404, JSON inválido, límites de payload y qu
 
 `.env`, dependencias, compilados y cliente Prisma generado están excluidos de Git. Mantener `package-lock.json`, ejemplos de entorno y migraciones versionados. Nunca subir credenciales reales.
 
-Sugerencia de commits: `chore: initialize backend workspace`, `feat: add relational schema and initial migration`, `test: verify API foundation`.
+Ejemplos de commits: `chore: initialize backend workspace`, `feat: add relational schema and initial migration`, `test: verify API foundation`.
 
 Fase 2 recomendada: registro/login, hashing de contraseñas, JWT de acceso de corta duración, rotación de refresh tokens con revocación, validación Zod, middleware de autenticación y autorización por rol/propietario, con pruebas de seguridad. Después: negocios, servicios, empleados y horarios; luego disponibilidad y reservas transaccionales; finalmente frontend.
 
@@ -216,3 +215,29 @@ Para inspeccionar la evolucion:
 ```sh
 git log --graph --oneline --decorate --all
 ```
+
+### Verificar la infraestructura local
+
+Antes de iniciar, abrir Docker Desktop. Solo PostgreSQL se ejecuta en Docker:
+
+```sh
+docker version
+docker compose up -d --wait
+docker compose ps
+docker compose exec postgres pg_isready -U booklypro -d booklypro
+npm run db:validate
+```
+
+El contenedor debe aparecer como saludable. Los datos permanecen en un volumen administrado por Docker, fuera del repositorio. La API corre en Node.js local.
+
+Tras configurar ambos archivos de entorno, tambi?n puedes iniciar desde el backend:
+
+```sh
+cd server
+npm install
+npm run dev
+```
+
+El script `predev` genera autom?ticamente el cliente Prisma. Para instalaciones reproducibles se recomienda `npm ci` desde la ra?z, usando el lockfile del monorepo. Para generar el cliente manualmente: `npm run db:generate` desde la ra?z o desde `server/`.
+
+Para comprobar una ca?da en tu entorno local, mant?n la API encendida, ejecuta `docker compose stop postgres` y consulta `/api/health`: debe responder 503. Despu?s ejecuta `docker compose up -d --wait` y repite la consulta: debe volver a responder 200. La parada afecta a las conexiones locales al contenedor; no borra el volumen.
