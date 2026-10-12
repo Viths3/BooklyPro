@@ -311,7 +311,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/appointments. La siguiente tarea sera feature/reviews.
+La entrega actual incluye feature/reviews. El frontend queda para una tarea posterior.
 
 ## Gestion de negocios
 
@@ -658,7 +658,7 @@ Invoke-RestMethod "$api/appointments/$appointmentId/status" -Method Patch -Heade
 Invoke-RestMethod "$api/appointments/$appointmentId/cancel" -Method Patch -Headers $customerHeaders
 ```
 
-La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas. No se inicia feature/reviews.
+La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas.
 
 ## Reseñas
 
