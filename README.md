@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. No hay frontend ni reservas todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. No hay frontend ni creacion de reservas todavia.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
 
@@ -215,7 +215,7 @@ erDiagram
 - Fechas absolutas `timestamptz` y zona IANA por negocio. Horarios locales en minutos desde medianoche, enum MONDAY a SUNDAY y un intervalo por dia. Negocio usa openingTime/closingTime y empleado startTime/endTime; no hay pausas multiples ni turnos nocturnos.
 - Claves compuestas impiden mezclar negocios en empleados, servicios y citas. La reseña coincide con cliente y negocio de su cita y solo hay una por cita.
 - CHECK: rating 1-5, precios no negativos, duracion 1-1440 minutos, horarios coherentes, fechas de tokens y formato de hash/moneda/email.
-- La exclusion GiST con btree_gist impide citas solapadas del mismo empleado incluso con concurrencia. Intervalos `[inicio, fin)` permiten citas contiguas; solo CANCELLED libera el intervalo.
+- La exclusion GiST con btree_gist impide citas solapadas del mismo empleado incluso con concurrencia. Intervalos `[inicio, fin)` permiten citas contiguas; solo PENDING y CONFIRMED bloquean el intervalo; CANCELLED, COMPLETED y NO_SHOW no lo bloquean.
 - Indices por propietario, catalogos activos, agendas por cliente/negocio/empleado y fecha, estado/fecha y fecha global; reseñas por negocio/fecha; tokens por usuario, familia y expiracion.
 - Borrados restrictivos conservan historial; solo horarios y tokens dependientes usan cascada.
 - La API ya valida propiedad, estados activos e integridad de EmployeeService. Las futuras reservas deberan validar tambien la asignacion, duracion e interseccion de horarios, transiciones de estado y citas completadas para publicar valoraciones.
@@ -303,7 +303,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/schedules. El calculo de disponibilidad y las reservas quedan para tareas posteriores.
+La entrega actual incluye feature/availability. La creacion y gestion de reservas queda para feature/appointments.
 
 ## Gestion de negocios
 
@@ -503,7 +503,7 @@ Las horas de entrada usan HH:mm exacto, de 00:00 a 23:59. No se aceptan `9:00`, 
 
 La migracion **20261012200000_inactive_schedule_intervals** ajusta unicamente los CHECK de ambas tablas para permitir intervalos iguales en dias inactivos, manteniendo limites numericos y el orden obligatorio en dias activos. No cambia schema.prisma ni migraciones anteriores: estos CHECK se expresan en SQL. Conserva el limite historico de fin de dia 1440 en la base para no invalidar filas anteriores; si existieran, las respuestas muestran ese extremo como 24:00, aunque las nuevas entradas de la API llegan hasta 23:59. Aplicar con `npm run db:deploy` antes de usar las nuevas rutas.
 
-Se reutiliza **Business.timeZone**, ya existente con valor IANA por defecto America/Guayaquil. Las horas representan la hora local del negocio. No se agrega otro campo ni una migracion de timezone; la conversion de fechas y el calculo de disponibilidad quedan para la siguiente feature.
+Se reutiliza **Business.timeZone**, ya existente con valor IANA por defecto America/Guayaquil. Las horas representan la hora local del negocio. No se agrega otro campo ni una migracion de timezone; la disponibilidad descrita mas abajo utiliza ese mismo campo para convertir fechas e instantes.
 
 ### Propiedad, conflictos y transacciones
 
@@ -540,4 +540,70 @@ Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -
 Invoke-RestMethod "$api/businesses/$businessId/schedules/MONDAY" -Method Patch -Headers $headers -ContentType 'application/json' -Body '{"closingTime":"16:00"}'
 ```
 
-`server/test/integration/schedule.test.ts` prueba ambos tipos de horario, privacidad, ownership, validacion estricta, dias cerrados, limites del negocio, PATCH parcial, reemplazo y vaciado semanal, conflictos, concurrencia y rollback ante un fallo de base de datos despues del borrado. Se ejecuta con `npm run test:integration` junto con las regresiones existentes y aplica las tres migraciones sobre bases temporales aisladas. No implementa reservas ni disponibilidad.
+`server/test/integration/schedule.test.ts` prueba ambos tipos de horario, privacidad, ownership, validacion estricta, dias cerrados, limites del negocio, PATCH parcial, reemplazo y vaciado semanal, conflictos, concurrencia y rollback ante un fallo de base de datos despues del borrado. Se ejecuta con `npm run test:integration` junto con las regresiones existentes y aplica las migraciones sobre bases temporales aisladas. La disponibilidad tiene su propia suite; la creacion de reservas sigue pendiente.
+
+## Consulta de disponibilidad
+
+`GET /api/availability` es publico y exige cuatro query params unicos: `businessId`, `serviceId` y `employeeId` como UUID, y `date` como fecha real `YYYY-MM-DD`. Rechaza parametros desconocidos, repetidos, arrays, fechas inexistentes y fechas anteriores al dia actual **del negocio**.
+
+```powershell
+$api = 'http://localhost:3000/api'
+# Usar IDs propios de los ejemplos anteriores, con servicio asignado y horarios configurados.
+$date = '2030-01-07' # Lunes; sustituir por una fecha local vigente.
+Invoke-RestMethod "$api/availability?businessId=$businessId&serviceId=$serviceId&employeeId=$employeeId&date=$date"
+```
+
+Ejemplo de respuesta para un empleado que trabaja 09:00-10:00 y un servicio de 30 minutos:
+
+```json
+{
+  "data": {
+    "date": "2030-01-07",
+    "businessId": "UUID_DEL_NEGOCIO",
+    "serviceId": "UUID_DEL_SERVICIO",
+    "employeeId": "UUID_DEL_EMPLEADO",
+    "durationMinutes": 30,
+    "slots": [
+      { "startTime": "09:00", "endTime": "09:30" },
+      { "startTime": "09:15", "endTime": "09:45" },
+      { "startTime": "09:30", "endTime": "10:00" }
+    ]
+  }
+}
+```
+
+### Generacion y consultas
+
+Se verifican negocio, servicio y empleado activos, pertenencia al mismo negocio y asignacion EmployeeService. El dia se obtiene del calendario local, de MONDAY a SUNDAY. BusinessSchedule usa openingTime/closingTime y EmployeeSchedule usa startTime/endTime; se comprueba openingTime <= startTime y endTime <= closingTime. Un horario activo de empleado fuera del negocio devuelve 409, sin recortarlo silenciosamente.
+
+Desde el inicio laboral del empleado se generan candidatos cada **15 minutos**, con duracion Service.durationMinutes, hasta que el servicio deje de caber completo. El paso se configura mediante `AVAILABILITY_SLOT_INTERVAL_MINUTES` (entero 1-1440, por defecto 15) en server/.env y requiere reiniciar la API. La secuencia se ancla al inicio del empleado: 09:07 produce 09:07, 09:22, etc. A 15 minutos son como maximo 96 candidatos por dia, manejables para este modelo. Slots alternativos pueden solaparse entre si; representan opciones, no reservas simultaneas.
+
+Se leen negocio/horario, servicio, empleado/horario/asignacion y citas mediante operaciones Prisma dentro de una transaccion de lectura RepeatableRead. No hay consultas por slot. Las citas se filtran por empleado y por interseccion con el dia local convertido a UTC; se incluyen las que empezaron antes de medianoche. Se seleccionan solo startTime/endTime, sin exponer cliente, notas ni IDs de citas. El filtrado final ocurre en memoria. La respuesta lleva Cache-Control: no-store.
+
+### Citas que bloquean
+
+Solo **PENDING** y **CONFIRMED** bloquean, aunque correspondan a otro servicio del mismo empleado. CANCELLED, COMPLETED y NO_SHOW no bloquean disponibilidad futura. Una cita de otro empleado no afecta el resultado.
+
+Se usa la regla de intervalos semiabiertos: `newStart < existingEnd && newEnd > existingStart`. Una cita 10:00-10:30 bloquea 09:45-10:15, 10:00-10:30 y 10:15-10:45, pero permite empezar a las 10:30. Las comparaciones se realizan entre instantes UTC, conservando segundos y milisegundos.
+
+La migracion **20261012210000_appointment_blocking_statuses** ajusta el predicado de la exclusion GiST existente para que solo incluya PENDING/CONFIRMED, alineando PostgreSQL con la API. Mantiene la proteccion contra solapamientos concurrentes de citas bloqueantes y no elimina ni modifica citas. No se alteraron migraciones anteriores ni modelos Prisma. Aplicar con `npm run db:deploy`.
+
+### Fechas y zona horaria
+
+Se reutiliza Business.timeZone (por defecto America/Guayaquil). Las fechas y horas de salida son locales al negocio; las citas permanecen timestamptz. Se incorporo `@js-temporal/polyfill` para manejar calendario e IANA sin offsets fijos ni depender de la zona del servidor. La [documentacion de Temporal.ZonedDateTime](https://tc39.es/proposal-temporal/docs/zoneddatetime.html) describe las conversiones y opciones de desambiguacion utilizadas.
+
+Para hoy se descartan candidatos cuyo inicio sea anterior al instante actual, incluyendo segundos; un inicio exactamente igual a ahora se permite. Los limites del dia pueden abarcar 23 o 25 horas durante cambios de horario. Como HH:mm no permite distinguir horas locales repetidas, esta version omite candidatos con extremos ambiguos o inexistentes y aquellos cuya duracion real no coincide con los minutos del servicio. No se desplazan silenciosamente las horas. El limite historico de horario 1440 se serializa como 24:00 y corresponde a medianoche del dia siguiente.
+
+| Situacion                                                                         | Resultado           |
+| --------------------------------------------------------------------------------- | ------------------- |
+| Parametros invalidos o fecha local pasada                                         | 400                 |
+| Servicio/empleado de otro negocio o servicio sin asignar                          | 400                 |
+| Negocio, servicio o empleado inexistente/inactivo                                 | 404                 |
+| Horarios inconsistentes o timezone persistido invalido                            | 409                 |
+| Dia cerrado, sin horario, servicio que no cabe o todos los slots ocupados/pasados | 200 con slots vacio |
+
+La consulta es una fotografia de disponibilidad: **no reserva el horario**. La futura feature/appointments debera volver a validar y crear la reserva atomicamente, apoyandose en la exclusion PostgreSQL. Esta feature no incorpora rutas de escritura de citas.
+
+### Pruebas de disponibilidad
+
+`npm test` incluye las pruebas unitarias de slots, limites, instantes, zonas con offsets fraccionarios y cambios DST. `npm run test:integration` incluye disponibilidad con reloj inyectado y PostgreSQL real, mas autenticacion, negocios, servicios, empleados y horarios; cada suite usa una base temporal y aplica las cuatro migraciones. Se prueban los estados de citas, solapamientos parciales, contiguedad, medianoche, entidades inactivas, pertenencia, asignaciones, validacion, hoy/fechas pasadas y consistencia de la exclusion SQL.
