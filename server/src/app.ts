@@ -16,6 +16,7 @@ export function createApp(
     schedules?: Router;
     availability?: Router;
     appointments?: Router;
+    reviews?: Router;
   } = {},
   options: { corsOrigins?: string[]; trustProxyHops?: number } = {},
 ) {
@@ -39,6 +40,7 @@ export function createApp(
   if (routers.employees) app.use('/api', routers.employees);
   if (routers.schedules) app.use('/api', routers.schedules);
   if (routers.availability) app.use('/api', routers.availability);
+  if (routers.reviews) app.use('/api', routers.reviews);
   if (routers.appointments) app.use('/api', routers.appointments);
   app.use('/api', createApiRouter(checkDatabase));
   app.use((_req, _res, next) =>

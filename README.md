@@ -4,9 +4,9 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. Las reservas permiten crear citas, consultar historial, cancelar y gestionar estados. No hay frontend todavia.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. Las reservas permiten crear citas, consultar historial, cancelar y gestionar estados. Las reseñas incluyen una valoracion por cita completada y resumen publico. El frontend permite registro, login, logout, dashboard protegido y consulta de negocios, servicios, empleados y reseñas; permite reservar citas mediante un flujo guiado con confirmacion PENDING.
 
-Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend futuro usara React, Vite, Tailwind CSS, React Router, TanStack Query y React Hook Form.
+Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend usa React, Vite, Tailwind CSS, React Router, TanStack Query, React Hook Form y Vitest con Testing Library.
 
 ## Requisitos e instalacion
 
@@ -311,7 +311,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/appointments. La siguiente tarea sera feature/reviews.
+La entrega actual incluye feature/customer-dashboard: consulta de citas, cancelacion y resenas desde la cuenta del cliente. El dashboard del propietario queda para una tarea posterior.
 
 ## Gestion de negocios
 
@@ -658,7 +658,73 @@ Invoke-RestMethod "$api/appointments/$appointmentId/status" -Method Patch -Heade
 Invoke-RestMethod "$api/appointments/$appointmentId/cancel" -Method Patch -Headers $customerHeaders
 ```
 
-La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas. No se inicia feature/reviews.
+La suite appointment.test.ts cubre autorizacion, estados finales, precios historicos, filtros, errores estandarizados, cancelaciones repetidas, reservas concurrentes iguales/parcialmente solapadas/adyacentes, transiciones concurrentes y proteccion SQL. Se ejecuta con `npm run test:integration`, junto con todas las regresiones. Las cuatro migraciones existentes permanecen intactas.
+
+## Reseñas
+
+| Método | Ruta                                      | Acceso                          |
+| ------ | ----------------------------------------- | ------------------------------- |
+| POST   | `/api/appointments/:appointmentId/review` | Cliente autenticado de esa cita |
+| GET    | `/api/businesses/:businessId/reviews`     | Público                         |
+| GET    | `/api/reviews/:id`                        | Público                         |
+
+Solo una cita `COMPLETED` puede recibir una reseña, y solo una por cita. Una cita
+ajena devuelve `403 FORBIDDEN`, sin bypass para propietario ni ADMIN. Los estados
+`PENDING`, `CONFIRMED`, `CANCELLED` y `NO_SHOW` devuelven
+`409 APPOINTMENT_NOT_REVIEWABLE`. El estado COMPLETED es terminal en la API.
+Las citas completadas pueden reseñarse aunque el negocio se desactive; sus reseñas
+siguen siendo públicas como historial. No se requiere que el negocio esté activo.
+
+Ejemplo de body (sin IDs ni campos internos):
+
+```json
+{ "rating": 5, "comment": "Excelente atención" }
+```
+
+`rating` es un número entero obligatorio entre 1 y 5, sin coerción desde texto.
+`comment` es un string opcional, con trim y máximo 1000 caracteres después del
+trim; omitido o vacío se guarda como `null`. El body no acepta `null` explícito ni
+otros tipos para comment. El servidor toma customerId de la sesión y businessId de
+la cita, y devuelve `201 { data: { id, rating, comment, createdAt } }` con Location.
+
+El listado acepta `page` (1 por defecto, máximo 1000000) y `limit` (20 por defecto,
+máximo 100), ambos enteros positivos. Ordena por `createdAt DESC, id DESC` para
+desempatar de forma estable. Una página fuera de rango devuelve data vacío sin
+perder el total ni el summary. El promedio se calcula con aggregate de Prisma sobre
+**todas** las reseñas del negocio, redondeado a un decimal; no se guarda en Business.
+JSON puede representar `5.0` como `5`. Sin reseñas, averageRating es `null`.
+
+```json
+{
+  "data": [
+    {
+      "id": "UUID",
+      "rating": 5,
+      "comment": "Excelente atención",
+      "createdAt": "2026-10-12T20:00:00.000Z",
+      "customer": { "firstName": "Juan" }
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 },
+  "summary": { "averageRating": 5, "totalReviews": 1 }
+}
+```
+
+El detalle individual añade únicamente `business: { id, name }` a los campos
+públicos del listado. No se exponen customerId, appointmentId, apellidos, email,
+teléfono, credenciales ni relaciones privadas. Un negocio inexistente devuelve
+`404 BUSINESS_NOT_FOUND`; una reseña inexistente, `404 REVIEW_NOT_FOUND`.
+
+La aplicación comprueba duplicados antes de insertar; la restricción UNIQUE
+existente sobre Review.appointmentId impide también duplicados concurrentes.
+Ambos casos devuelven `409 REVIEW_ALREADY_EXISTS` sin códigos Prisma/SQL internos.
+La FK compuesta existente exige que cita, cliente y negocio coincidan. No se
+modificaron el schema ni las cuatro migraciones. Listado, existencia del negocio
+y aggregate se leen en una transacción RepeatableRead para compartir snapshot.
+
+Las pruebas de `server/test/integration/review.test.ts` se ejecutan automáticamente
+con `npm run test:integration` y en CI, sobre una base temporal PostgreSQL local.
+Esta feature no añade edición, borrado ni moderación de reseñas.
 
 ## Deployment
 
@@ -667,3 +733,45 @@ Root Directory `/server`, variables, CORS, migraciones en pre-deploy y health ch
 El servicio despliega desde `main` después de CI; Docker continúa siendo la base
 local. La configuración está en `server/railway.json` y el pipeline en
 `.github/workflows/backend.yml`. No se ejecutan seeds en producción.
+
+## Frontend setup
+
+Desde la raíz del repositorio, instalar y configurar el paquete independiente:
+
+```bash
+cd client
+npm install
+cp .env.example .env
+npm run dev
+```
+
+En PowerShell usar `Copy-Item .env.example .env`; conservar el archivo si ya existe.
+Abrir **http://localhost:5173**. `client/.env` define
+`VITE_API_URL=http://localhost:3000` (origen, sin `/api`). La variable es pública y
+se incorpora al build; nunca poner secretos en variables VITE_.
+
+Flujo local, en terminales separadas:
+
+```bash
+# Terminal 1, raíz
+docker compose up -d
+
+# Terminal 2, raíz
+cd server
+npm run dev
+
+# Terminal 3, raíz
+cd client
+npm run dev
+```
+
+El backend necesita las variables y migraciones descritas arriba. Mantener
+`http://localhost:5173` en `CORS_ORIGINS` si se configura explícitamente.
+Las rutas incluyen landing, login, registro, catálogo, detalle y dashboard
+protegido. Los tokens se mantienen únicamente en memoria: recargar requiere
+iniciar sesión de nuevo. La reserva se inicia desde el detalle del negocio; el dashboard permite consultar y cancelar citas y reseñar citas completadas.
+
+Verificar desde `client/` con `npm run build`, `npm run lint` y `npm test`.
+La [documentación del cliente](client/README.md) explica estructura, sesiones,
+refresh concurrente, contratos API y limitaciones. El backend conserva sus scripts
+en la raíz y el cliente tiene CI separado en `.github/workflows/frontend.yml`.

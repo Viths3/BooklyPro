@@ -51,6 +51,19 @@ code es estable, MAYUSCULAS_SNAKE_CASE; message es descriptivo y no debe usarse 
 
 AppError admite statusCode, message, code y details opcional. Los modulos existentes conservan sus HTTP y disponen de codigos genericos segun el status cuando no requieren un codigo especifico. Los errores de exclusion PostgreSQL (23P01), serializacion y deadlock al crear citas se convierten a APPOINTMENT_SLOT_UNAVAILABLE, sin exponer codigos internos. Otros fallos no previstos permanecen como 500.
 
+## Extensión de reseñas
+
+El listado público de reseñas añade `summary: { averageRating, totalReviews }`
+al mismo nivel que `data` y `pagination`. El summary abarca todas las reseñas del
+negocio, no solo la página solicitada. averageRating es un número redondeado a un
+decimal o `null` cuando no hay reseñas; totalReviews coincide con pagination.total.
+
+Códigos nuevos: `404 REVIEW_NOT_FOUND`, `409 APPOINTMENT_NOT_REVIEWABLE` y
+`409 REVIEW_ALREADY_EXISTS`. Una violación UNIQUE al crear una reseña se traduce a
+REVIEW_ALREADY_EXISTS sin exponer el error Prisma. Se conservan los códigos de
+validación, autenticación, ownership y recursos existentes. Contrato y ejemplos
+completos en [Reseñas del README](../README.md#reseñas).
+
 ## Cambio de contrato de autenticacion y health
 
 Desde feature/appointments, register, login, refresh, me y health envuelven su resultado en data. Los consumidores deben usar response.data. Ejemplo: login entrega `{ "data": { "user": {...}, "accessToken": "...", "refreshToken": "...", "tokenType": "Bearer", "expiresIn": 900 } }`.

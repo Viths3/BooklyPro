@@ -1,4 +1,7 @@
 import { AppointmentRepository } from './repositories/appointment.repository.js';
+import { ReviewRepository } from './repositories/review.repository.js';
+import { ReviewService } from './services/review.service.js';
+import { createReviewRouter } from './routes/review.routes.js';
 import { AppointmentService } from './services/appointment.service.js';
 import { createAppointmentRouter } from './routes/appointment.routes.js';
 import { AvailabilityRepository } from './repositories/availability.repository.js';
@@ -33,6 +36,10 @@ const app = createApp(
   checkDatabase,
   {
     auth: createAuthRouter(auth),
+    reviews: createReviewRouter(
+      new ReviewService(new ReviewRepository(prisma)),
+      auth,
+    ),
     availability: createAvailabilityRouter(availability),
     appointments: createAppointmentRouter(
       new AppointmentService(new AppointmentRepository(prisma), availability),
