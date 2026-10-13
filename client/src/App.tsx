@@ -6,7 +6,10 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage, RegisterPage } from './features/auth/AuthPages';
 import { BusinessesPage } from './features/businesses/BusinessesPage';
 import { BusinessDetailsPage } from './features/businesses/BusinessDetailsPage';
-import { DashboardPage, DashboardPlaceholder } from './pages/DashboardPage';
+import { DashboardPlaceholder } from './pages/DashboardPage';
+import { CustomerOverview } from './features/appointments/CustomerOverview';
+import { AppointmentsPage } from './features/appointments/AppointmentsPage';
+import { AppointmentDetailsPage } from './features/appointments/AppointmentDetailsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { BookingPage } from './features/booking/BookingPage';
@@ -32,10 +35,11 @@ export function App() {
       </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardPage />} />
+          <Route index element={<CustomerOverview />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
           <Route
-            path="appointments"
-            element={<DashboardPlaceholder kind="appointments" />}
+            path="appointments/:appointmentId"
+            element={<AppointmentDetailsPage />}
           />
           <Route
             path="businesses"
