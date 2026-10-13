@@ -39,7 +39,9 @@ src/
 ├── components/common/        # Button, Input, Card, estados y ErrorBoundary
 ├── features/
 │   ├── auth/                 # Sesión, provider, validación y formularios
-│   └── businesses/           # Catálogo, detalle, servicios, equipo y reseñas
+│   ├── businesses/           # Catálogo, detalle, servicios, equipo y reseñas
+│   ├── booking/              # Flujo de reserva
+│   └── appointments/         # Dashboard, citas, cancelación y reseñas
 ├── layouts/                  # PublicLayout y DashboardLayout
 ├── lib/query.ts              # QueryClient y query keys
 ├── pages/                    # Landing, dashboard y 404
@@ -58,13 +60,13 @@ diseño excesivo. Se respetan navegación por teclado y reduced-motion.
 
 Públicas: `/`, `/login`, `/register`, `/businesses`, `/businesses/:businessId`.
 Protegidas: `/dashboard`, `/dashboard/appointments`, `/dashboard/businesses`.
-Las dos últimas muestran secciones preparadas, sin administración ni historial completo de citas.
+Mis citas incluye historial y detalle; Mis negocios queda preparado para una feature posterior.
 
 El catálogo usa búsqueda por nombre y páginas de 9 negocios. El detalle carga
 servicios, empleados y las 5 reseñas más recientes solo tras comprobar el negocio.
 El promedio y total proceden del summary del servidor, no de la página visible.
 Precios conservan el texto Decimal y se acompañan de la moneda del negocio.
-El flujo de reservas está disponible; no hay creación de reseñas desde el frontend.
+El flujo de reservas y las reseñas de citas completadas están disponibles.
 
 Toda lectura tiene estados de carga, error, reintento y vacío. Las query keys
 incluyen ID, página y búsqueda. Stale time: 30 segundos; foco y reconexión conservan
@@ -150,6 +152,31 @@ limpia el horario. Ante APPOINTMENT_SLOT_UNAVAILABLE se muestra un mensaje espec
 se limpia el slot, se invalida disponibilidad y se vuelve a elegir horario. Los errores
 de negocio ofrecen mensajes legibles y los pasos permiten regresar para corregirlos.
 
-Después del éxito, **Ver mis citas** dirige al dashboard preparado. El historial,
-cancelación y gestión de citas se implementarán en otra feature. No hay pagos,
-reprogramación, administración del propietario ni creación de reseñas en esta entrega.
+Después del éxito, **Ver mis citas** dirige al dashboard del cliente. El historial,
+cancelación y reseñas ya están disponibles. No hay pagos,
+reprogramación ni administración del propietario en esta entrega.
+
+## Customer Dashboard
+
+Las rutas protegidas `/dashboard`, `/dashboard/appointments` y
+`/dashboard/appointments/:appointmentId` permiten consultar la próxima cita, listar
+citas con filtro de estado y paginación, y abrir su detalle. Los enlaces directos
+vuelven al destino interno tras login. Las fechas se muestran en la zona del negocio.
+
+El resumen consulta PENDING y CONFIRMED desde el momento de abrir la página, con
+limit=1 y sus totales. La lista usa el filtro status y la paginación del servidor;
+las secciones Próximas e Historial agrupan solo la página visible, sin duplicados.
+Una cita futura cancelada o finalizada pertenece a Historial. La lista mantiene
+el orden ascendente que ofrece la API, sin descargar todas las páginas.
+
+Solo el cliente de una cita PENDING o CONFIRMED puede cancelarla, previa confirmación.
+La actualización renueva detalle, listas, resumen y disponibilidad sin recargar.
+Para COMPLETED sin reseña, el formulario permite una valoración entera de 1 a 5
+y comentario opcional de hasta 1000 caracteres. Una reseña existente bloquea
+nuevos envíos. No se permite editar o borrar reseñas.
+
+Cambio mínimo de backend: GET /api/appointments/:id añade hasReview, obtenido por
+la relación existente en la consulta de detalle. Era necesario porque la API no
+ofrecía búsqueda de reseñas por cita; no se realizan consultas por cada tarjeta.
+Se preservan permisos y campos anteriores, sin cambios de schema ni migraciones.
+Las respuestas de listado, creación y cancelación conservan su contrato anterior.
