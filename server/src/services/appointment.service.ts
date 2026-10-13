@@ -92,7 +92,8 @@ export class AppointmentService {
     requireAppointment(row);
     if (row.customerId !== userId && row.business.ownerId !== userId)
       throw new AppError(403, 'You cannot view this appointment');
-    return response(row);
+    const { review, ...appointment } = row;
+    return { ...response(appointment), hasReview: review !== null };
   }
   async listMine(userId: string, query: AppointmentListQuery) {
     return this.list(
