@@ -9,6 +9,7 @@ import { BusinessDetailsPage } from './features/businesses/BusinessDetailsPage';
 import { DashboardPage, DashboardPlaceholder } from './pages/DashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { BookingPage } from './features/booking/BookingPage';
 export function App() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -22,6 +23,7 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="businesses" element={<BusinessesPage />} />
+        <Route path="businesses/:businessId/book" element={<BookingPage />} />
         <Route
           path="businesses/:businessId"
           element={<BusinessDetailsPage />}

@@ -4,7 +4,7 @@ Plataforma SaaS de reservas para pequenos negocios, desarrollada por fases como 
 
 ## Estado actual
 
-Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. Las reservas permiten crear citas, consultar historial, cancelar y gestionar estados. Las reseñas incluyen una valoracion por cita completada y resumen publico. El frontend permite registro, login, logout, dashboard protegido y consulta de negocios, servicios, empleados y reseñas; todavia no permite reservar.
+Backend con PostgreSQL, modelo relacional, migraciones, seed de desarrollo, health check y autenticacion. Registro, login, refresh, logout y consulta del usuario autenticado estan disponibles. La gestion de negocios ya permite crear, consultar, editar y desactivar. La gestion de servicios incluye catalogo publico y administracion por propietario. La gestion de empleados permite administrar personal y asignarle servicios. Los horarios semanales de negocios y empleados ya se pueden configurar. La consulta publica de disponibilidad calcula slots por servicio, empleado y fecha. Las reservas permiten crear citas, consultar historial, cancelar y gestionar estados. Las reseñas incluyen una valoracion por cita completada y resumen publico. El frontend permite registro, login, logout, dashboard protegido y consulta de negocios, servicios, empleados y reseñas; permite reservar citas mediante un flujo guiado con confirmacion PENDING.
 
 Stack: Node.js 22.13+, Express 5, TypeScript estricto, Prisma 7, PostgreSQL 17, Zod, bcrypt, jsonwebtoken, ESLint, Prettier y npm workspaces. Docker ejecuta solamente PostgreSQL. El frontend usa React, Vite, Tailwind CSS, React Router, TanStack Query, React Hook Form y Vitest con Testing Library.
 
@@ -311,7 +311,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/frontend-setup. El flujo de reservas del frontend queda para una tarea posterior.
+La entrega actual incluye feature/booking-flow. El dashboard completo del cliente queda para una tarea posterior.
 
 ## Gestion de negocios
 
@@ -769,7 +769,7 @@ El backend necesita las variables y migraciones descritas arriba. Mantener
 `http://localhost:5173` en `CORS_ORIGINS` si se configura explícitamente.
 Las rutas incluyen landing, login, registro, catálogo, detalle y dashboard
 protegido. Los tokens se mantienen únicamente en memoria: recargar requiere
-iniciar sesión de nuevo. No hay reservas ni creación de reseñas en la interfaz.
+iniciar sesión de nuevo. La reserva se inicia desde el detalle del negocio; la creación de reseñas sigue pendiente.
 
 Verificar desde `client/` con `npm run build`, `npm run lint` y `npm test`.
 La [documentación del cliente](client/README.md) explica estructura, sesiones,

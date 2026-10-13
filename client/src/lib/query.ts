@@ -26,4 +26,12 @@ export const queryKeys = {
   services: (id: string) => ['services', id] as const,
   employees: (id: string) => ['employees', id] as const,
   reviews: (id: string) => ['reviews', id] as const,
+  bookingEmployees: (businessId: string, serviceId: string) =>
+    ['booking-employees', businessId, serviceId] as const,
+  availability: (
+    businessId: string,
+    serviceId: string,
+    employeeId: string,
+    date: string,
+  ) => ['availability', businessId, serviceId, employeeId, date] as const,
 };

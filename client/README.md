@@ -1,4 +1,4 @@
-# BooklyPro · Frontend
+﻿# BooklyPro · Frontend
 
 Base React + Vite + TypeScript estricto. Tailwind CSS 4 usa `@tailwindcss/vite` y
 `@import 'tailwindcss'`. React Router gestiona rutas; TanStack Query cachea lecturas;
@@ -58,13 +58,13 @@ diseño excesivo. Se respetan navegación por teclado y reduced-motion.
 
 Públicas: `/`, `/login`, `/register`, `/businesses`, `/businesses/:businessId`.
 Protegidas: `/dashboard`, `/dashboard/appointments`, `/dashboard/businesses`.
-Las dos últimas muestran secciones preparadas, sin administración ni reservas.
+Las dos últimas muestran secciones preparadas, sin administración ni historial completo de citas.
 
 El catálogo usa búsqueda por nombre y páginas de 9 negocios. El detalle carga
 servicios, empleados y las 5 reseñas más recientes solo tras comprobar el negocio.
 El promedio y total proceden del summary del servidor, no de la página visible.
 Precios conservan el texto Decimal y se acompañan de la moneda del negocio.
-No hay creación de reservas ni reseñas desde el frontend.
+El flujo de reservas está disponible; no hay creación de reseñas desde el frontend.
 
 Toda lectura tiene estados de carga, error, reintento y vacío. Las query keys
 incluyen ID, página y búsqueda. Stale time: 30 segundos; foco y reconexión conservan
@@ -116,3 +116,40 @@ con refresh concurrente, logout y respuestas tardías.
 
 No se configura hosting todavía. Cuando se despliegue una SPA, el hosting deberá
 reenviar rutas como `/businesses/:id` a `index.html` y definir VITE_API_URL en build.
+
+## Booking flow
+
+Desde el detalle del negocio, **Reservar cita** abre `/businesses/:businessId/book`.
+El wizard permite elegir servicio, profesional, fecha y horario, revisar el resumen
+y crear una cita `PENDING`. El precio se muestra como texto Decimal con su moneda.
+
+Se consultan los servicios activos y los empleados públicos del negocio. Para cada
+empleado se consulta `/api/employees/:id/services` y se incluyen solo los asignados
+al servicio. El backend requiere un empleado concreto: no existe selección automática.
+Esta estrategia implica una petición adicional por empleado; no se cambió el backend.
+
+Las fechas se validan contra el día actual de `Business.timeZone`. Se envían `date`
+como YYYY-MM-DD y `startTime` como HH:mm, sin convertir la selección a UTC. La
+confirmación muestra el instante devuelto por la API en la zona del negocio.
+
+TanStack Query gestiona negocio, servicios, profesionales elegibles y disponibilidad.
+La key de disponibilidad incluye negocio, servicio, empleado y fecha. La mutation
+usa `session.request` y envía solo businessId, serviceId, employeeId, date, startTime
+y notas opcionales (hasta 500 caracteres). No reintenta automáticamente la creación.
+El botón se bloquea mientras se envía para evitar dobles clics.
+
+Al confirmar sin sesión, login recibe un returnTo interno validado. Solo se conservan
+los IDs y fecha/hora públicos; se revalidan contra la API al volver. No se persisten
+notas, datos personales ni tokens. También se conserva el retorno si se pasa por
+registro. Recargar conserva únicamente las selecciones que estén en la URL de retorno;
+la sesión y las notas siguen siendo solo de memoria. Se requiere confirmar de nuevo
+tras login: nunca se crea una cita automáticamente.
+
+Cambiar servicio limpia profesional, fecha y horario; cambiar profesional o fecha
+limpia el horario. Ante APPOINTMENT_SLOT_UNAVAILABLE se muestra un mensaje específico,
+se limpia el slot, se invalida disponibilidad y se vuelve a elegir horario. Los errores
+de negocio ofrecen mensajes legibles y los pasos permiten regresar para corregirlos.
+
+Después del éxito, **Ver mis citas** dirige al dashboard preparado. El historial,
+cancelación y gestión de citas se implementarán en otra feature. No hay pagos,
+reprogramación, administración del propietario ni creación de reseñas en esta entrega.
