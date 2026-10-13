@@ -1,5 +1,149 @@
 @import 'tailwindcss';
 
+@layer components {
+  .booking-cta {
+    margin-top: 1.5rem;
+  }
+  .booking-shell {
+    max-width: 980px;
+  }
+  .booking-shell h1 {
+    font-size: clamp(2rem, 5vw, 3.7rem);
+    margin-bottom: 1rem;
+  }
+  .booking-stepper {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.5rem;
+    padding: 0;
+    margin: 2rem 0;
+  }
+  .booking-stepper li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #63736d;
+    font-size: 0.85rem;
+  }
+  .booking-stepper li span {
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid #b8c5b4;
+    border-radius: 50%;
+  }
+  .booking-stepper .reached {
+    color: #193e35;
+  }
+  .booking-stepper [aria-current='step'] {
+    font-weight: 700;
+  }
+  .booking-stepper [aria-current='step'] span {
+    background: #193e35;
+    color: white;
+  }
+  .booking-panel {
+    margin: 2rem 0;
+    min-height: 160px;
+  }
+  .booking-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .booking-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    text-align: left;
+    background: white;
+    padding: 1.5rem;
+    border: 2px solid #dce2d6;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .booking-option:hover,
+  .booking-slot:hover {
+    border-color: #6d845b;
+  }
+  .booking-option[aria-pressed='true'],
+  .booking-slot[aria-pressed='true'] {
+    border-color: #193e35;
+    background: #e9efdf;
+    box-shadow: inset 0 0 0 1px #193e35;
+  }
+  .booking-option-meta {
+    font-weight: 600;
+    margin-top: auto;
+  }
+  .booking-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+  }
+  .booking-slot {
+    min-height: 48px;
+    background: white;
+    border: 2px solid #dce2d6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .booking-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    background: #edf1e6;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+  }
+  .booking-summary dt {
+    font-size: 0.85rem;
+    color: #52635b;
+  }
+  .booking-summary dd {
+    margin: 0.4rem 0 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .booking-panel textarea {
+    width: 100%;
+    border: 1px solid #b8c5b4;
+    border-radius: 8px;
+    padding: 0.8rem;
+    background: white;
+    resize: vertical;
+    font: inherit;
+  }
+  .booking-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .booking-actions > :only-child {
+    margin-left: auto;
+  }
+  .booking-success {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.2rem;
+  }
+  @media (max-width: 600px) {
+    .booking-options,
+    .booking-summary {
+      grid-template-columns: 1fr;
+    }
+    .booking-stepper {
+      gap: 0.7rem;
+    }
+  }
+}
+
 @theme {
   --color-forest: #173d35;
   --color-paper: #f7f7f2;

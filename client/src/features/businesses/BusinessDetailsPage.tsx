@@ -89,6 +89,12 @@ export function BusinessDetailsPage() {
               </p>
             )}
           </div>
+          <Link
+            className="button button-primary booking-cta"
+            to={`/businesses/${businessId}/book`}
+          >
+            Reservar cita <span aria-hidden="true">↗</span>
+          </Link>
         </div>
         <div className="detail-image">
           <BusinessImage

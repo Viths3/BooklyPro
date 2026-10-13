@@ -115,6 +115,22 @@ export function errorMessage(error: unknown) {
         'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.',
       FORBIDDEN: 'No tienes permiso para acceder a esta información.',
       BUSINESS_NOT_FOUND: 'Este negocio no está disponible.',
+      BUSINESS_INACTIVE: 'Este negocio ya no acepta reservas.',
+      SERVICE_NOT_FOUND:
+        'Este servicio ya no está disponible. Elige otro servicio.',
+      SERVICE_INACTIVE:
+        'Este servicio ya no está disponible. Elige otro servicio.',
+      EMPLOYEE_NOT_FOUND:
+        'Este profesional ya no está disponible. Elige otro profesional.',
+      EMPLOYEE_INACTIVE:
+        'Este profesional ya no está disponible. Elige otro profesional.',
+      SERVICE_NOT_ASSIGNED_TO_EMPLOYEE:
+        'Este profesional ya no realiza el servicio. Vuelve atrás y elige otro.',
+      APPOINTMENT_SLOT_UNAVAILABLE:
+        'Este horario acaba de ser reservado. Elige otro horario.',
+      INVALID_DATE: 'La fecha ya pasó en el negocio. Elige otra fecha.',
+      INVALID_APPOINTMENT_DATA:
+        'Las selecciones de la reserva no coinciden. Revisa el servicio y el profesional.',
       VALIDATION_ERROR: 'Revisa los datos del formulario.',
     };
     return messages[error.code] ?? error.message;

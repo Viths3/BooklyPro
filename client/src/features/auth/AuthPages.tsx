@@ -11,6 +11,7 @@ import {
   type RegisterInput,
 } from './schemas';
 import { Button, ErrorMessage, Input } from '../../components/common/ui';
+import { safeBookingReturn } from '../booking/model';
 
 function AuthAside() {
   return (
@@ -35,6 +36,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state: unknown = location.state;
+  const returnTo = safeBookingReturn(state);
   const notice =
     typeof state === 'object' &&
     state !== null &&
@@ -52,7 +54,7 @@ export function LoginPage() {
     setError(null);
     try {
       await session.login(input);
-      navigate('/dashboard', { replace: true });
+      navigate(returnTo ?? '/dashboard', { replace: true });
     } catch (error) {
       setError(error);
     }
@@ -93,7 +95,10 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="auth-switch">
-          ¿Aún no tienes cuenta? <Link to="/register">Crea una cuenta</Link>
+          ¿Aún no tienes cuenta?{' '}
+          <Link to="/register" state={{ returnTo }}>
+            Crea una cuenta
+          </Link>
         </p>
       </section>
     </div>
@@ -102,6 +107,7 @@ export function LoginPage() {
 export function RegisterPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
+  const returnTo = safeBookingReturn(useLocation().state);
   const [error, setError] = useState<unknown>(null);
   const {
     register,
@@ -116,6 +122,7 @@ export function RegisterPage() {
       navigate('/login', {
         replace: true,
         state: {
+          returnTo,
           notice: 'Tu cuenta está lista. Inicia sesión para continuar.',
         },
       });
@@ -181,7 +188,10 @@ export function RegisterPage() {
           </Button>
         </form>
         <p className="auth-switch">
-          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" state={{ returnTo }}>
+            Inicia sesión
+          </Link>
         </p>
       </section>
     </div>
