@@ -8,6 +8,7 @@ const business = z.object({
   phone: z.string().nullable(),
   imageUrl: z.string().nullable(),
   currency: z.string(),
+  timeZone: z.string().optional(),
 });
 export type Business = z.infer<typeof business>;
 const pagination = z.object({
@@ -28,6 +29,8 @@ const employee = z.object({
   firstName: z.string(),
   lastName: z.string(),
 });
+export type Service = z.infer<typeof service>;
+export type Employee = z.infer<typeof employee>;
 const review = z.object({
   id: z.string(),
   rating: z.number(),
