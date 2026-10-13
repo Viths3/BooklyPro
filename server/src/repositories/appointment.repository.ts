@@ -65,7 +65,10 @@ export class AppointmentRepository {
     );
   }
   find(id: string) {
-    return this.db.appointment.findUnique({ where: { id }, select });
+    return this.db.appointment.findUnique({
+      where: { id },
+      select: { ...select, review: { select: { id: true } } },
+    });
   }
   withAppointmentLock<T>(
     id: string,

@@ -73,6 +73,28 @@ let foreignBusinessId: string;
 let foreignEmployeeId: string;
 let foreignServiceId: string;
 const createPath = (id: string) => `/api/appointments/${id}/review`;
+test('appointment detail exposes only hasReview and preserves ownership after review creation', async () => {
+  const row = await appointment();
+  const path = `/api/appointments/${row.id}`;
+  const before = await request(path, 'GET', customer.accessToken);
+  assert.equal(before.status, 200);
+  assert.equal((await before.json()).data.hasReview, false);
+  assert.equal(
+    (
+      await request(createPath(row.id), 'POST', customer.accessToken, {
+        rating: 5,
+      })
+    ).status,
+    201,
+  );
+  const after = (
+    await (await request(path, 'GET', customer.accessToken)).json()
+  ).data;
+  assert.equal(after.hasReview, true);
+  assert.equal('review' in after, false);
+  await error(await request(path, 'GET', other.accessToken), 403, 'FORBIDDEN');
+  assert.equal((await request(path)).status, 401);
+});
 const listPath = () => `/api/businesses/${businessId}/reviews`;
 function request(path: string, method = 'GET', token?: string, body?: unknown) {
   return fetch(base + path, {

@@ -32,7 +32,7 @@ export function DashboardLayout() {
         <p className="eyebrow">MI ESPACIO</p>
         <nav aria-label="Panel personal">
           <NavLink to="/dashboard" end>
-            Vista general
+            Inicio
           </NavLink>
           <NavLink to="/dashboard/appointments">Mis citas</NavLink>
           <NavLink to="/dashboard/businesses">Mis negocios</NavLink>

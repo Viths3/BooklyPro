@@ -115,6 +115,11 @@ export function errorMessage(error: unknown) {
         'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.',
       FORBIDDEN: 'No tienes permiso para acceder a esta información.',
       BUSINESS_NOT_FOUND: 'Este negocio no está disponible.',
+      APPOINTMENT_NOT_FOUND: 'Esta cita no está disponible.',
+      INVALID_APPOINTMENT_STATUS_TRANSITION:
+        'El estado de esta cita cambió y ya no permite esta acción. Actualiza el detalle.',
+      APPOINTMENT_NOT_REVIEWABLE: 'Solo puedes reseñar una cita completada.',
+      REVIEW_ALREADY_EXISTS: 'Ya dejaste una reseña para esta cita.',
       BUSINESS_INACTIVE: 'Este negocio ya no acepta reservas.',
       SERVICE_NOT_FOUND:
         'Este servicio ya no está disponible. Elige otro servicio.',

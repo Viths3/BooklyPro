@@ -1293,3 +1293,111 @@
     transition: none !important;
   }
 }
+
+@layer components {
+  .appointment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 1rem;
+  }
+  .appointment-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.7rem;
+    overflow-wrap: anywhere;
+  }
+  .appointment-section {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+  .appointment-section h2 {
+    margin-bottom: 1rem;
+  }
+  .appointment-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .appointment-filter {
+    max-width: 320px;
+    margin: 1.5rem 0;
+  }
+  .appointment-filter select,
+  .review-form textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #b8c5b4;
+    border-radius: 8px;
+    background: white;
+    font: inherit;
+  }
+  .appointment-notes {
+    white-space: pre-wrap;
+  }
+  .status-pending {
+    background: #fff0ce;
+    color: #694500;
+  }
+  .status-confirmed {
+    background: #e2eefc;
+    color: #204770;
+  }
+  .status-completed {
+    background: #e1efdd;
+    color: #244b20;
+  }
+  .status-cancelled {
+    background: #f7e4e2;
+    color: #783d38;
+  }
+  .status-no_show {
+    background: #eee6f4;
+    color: #593569;
+  }
+  .confirm-dialog {
+    width: min(90vw, 540px);
+    margin: auto;
+    border: 1px solid #b8c5b4;
+    border-radius: 12px;
+    padding: 2rem;
+    background: #fafbf7;
+    color: #193e35;
+  }
+  .confirm-dialog::backdrop {
+    background: #102c26aa;
+  }
+  .confirm-dialog h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+  .review-form {
+    max-width: 640px;
+  }
+  .review-form fieldset {
+    border: 0;
+    padding: 0;
+  }
+  .rating-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+  .rating-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 48px;
+    padding: 0.6rem;
+    border: 1px solid #b8c5b4;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .rating-options label:has(input:checked) {
+    background: #dfead2;
+    border-color: #193e35;
+  }
+}

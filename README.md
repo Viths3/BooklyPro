@@ -311,7 +311,7 @@ Solo promover una fase estable desde develop a main; despues volver a develop. N
 
 La base inicial se implemento antes de crear el historial; se registro despues por responsabilidades. Los merges posteriores conservan las ramas de funcionalidad. Para ver el arbol: `git log --graph --oneline --decorate --all`.
 
-La entrega actual incluye feature/booking-flow. El dashboard completo del cliente queda para una tarea posterior.
+La entrega actual incluye feature/customer-dashboard: consulta de citas, cancelacion y resenas desde la cuenta del cliente. El dashboard del propietario queda para una tarea posterior.
 
 ## Gestion de negocios
 
@@ -769,7 +769,7 @@ El backend necesita las variables y migraciones descritas arriba. Mantener
 `http://localhost:5173` en `CORS_ORIGINS` si se configura explícitamente.
 Las rutas incluyen landing, login, registro, catálogo, detalle y dashboard
 protegido. Los tokens se mantienen únicamente en memoria: recargar requiere
-iniciar sesión de nuevo. La reserva se inicia desde el detalle del negocio; la creación de reseñas sigue pendiente.
+iniciar sesión de nuevo. La reserva se inicia desde el detalle del negocio; el dashboard permite consultar y cancelar citas y reseñar citas completadas.
 
 Verificar desde `client/` con `npm run build`, `npm run lint` y `npm test`.
 La [documentación del cliente](client/README.md) explica estructura, sesiones,

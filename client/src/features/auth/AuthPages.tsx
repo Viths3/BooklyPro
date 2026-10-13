@@ -11,7 +11,7 @@ import {
   type RegisterInput,
 } from './schemas';
 import { Button, ErrorMessage, Input } from '../../components/common/ui';
-import { safeBookingReturn } from '../booking/model';
+import { safeReturnTo } from './returnTo';
 
 function AuthAside() {
   return (
@@ -36,7 +36,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state: unknown = location.state;
-  const returnTo = safeBookingReturn(state);
+  const returnTo = safeReturnTo(state);
   const notice =
     typeof state === 'object' &&
     state !== null &&
@@ -107,7 +107,7 @@ export function LoginPage() {
 export function RegisterPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
-  const returnTo = safeBookingReturn(useLocation().state);
+  const returnTo = safeReturnTo(useLocation().state);
   const [error, setError] = useState<unknown>(null);
   const {
     register,

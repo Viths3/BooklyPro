@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
+import type { Filters } from '../features/appointments/api';
 export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -17,6 +18,13 @@ export function createQueryClient() {
   });
 }
 export const queryKeys = {
+  appointments: {
+    all: ['appointments'] as const,
+    me: (userId: string, filters: Filters) =>
+      ['appointments', userId, 'me', filters] as const,
+    detail: (userId: string, id: string) =>
+      ['appointments', userId, 'detail', id] as const,
+  },
   businesses: {
     all: ['businesses'] as const,
     list: (page: number, search: string) =>
