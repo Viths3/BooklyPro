@@ -266,3 +266,14 @@ para obtener el total y la próxima cita sin descargar todo el historial.
 
 Las pruebas en `src/test/owner-dashboard.test.tsx` cubren permisos, onboarding,
 CRUD, asignaciones, horarios, transiciones, conflictos e invalidación de listas.
+
+## UI/UX polish
+
+Los estados de citas y entidades comparten `StatusBadge`, con texto visible y
+colores diferenciados. `Select` asocia etiquetas/errores a controles; `SuccessMessage`
+anuncia guardados. Los formularios indican campos obligatorios y las descripciones
+usan textarea. Los diálogos mantienen foco y emplean acciones destructivas explícitas.
+La reserva muestra las selecciones previas y el precio antes del resumen final.
+Las citas del cliente muestran `priceAtBooking` cuando está presente; la respuesta
+actual no incluye moneda, por lo que no se deduce USD ni otra moneda.
+Se mantienen rutas, lógica de reserva, sesión y contratos de backend.
