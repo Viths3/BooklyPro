@@ -1,138 +1,104 @@
-import { Link } from 'react-router-dom';
-import { Arrow } from '../components/common/ui';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button, Input } from '../components/common/ui';
+
 export function HomePage() {
+  const navigate = useNavigate();
   return (
     <>
       <section className="hero container">
         <div className="hero-copy">
-          <p className="eyebrow">
-            <span className="status-dot" />
-            UN ESPACIO PARA TU TIEMPO
-          </p>
+          <p className="eyebrow">RESERVAS ONLINE</p>
           <h1>
             Encuentra tu lugar.
             <br />
-            <em>Hazte un espacio.</em>
+            <span>Reserva tu próxima cita.</span>
           </h1>
           <p className="hero-description">
-            Descubre negocios, conoce a las personas detrás de cada servicio y
-            elige lo que va contigo. Todo empieza por encontrar el lugar
-            indicado.
+            Consulta servicios, compara precios y elige un horario disponible.
+            Sin llamadas ni mensajes de ida y vuelta.
           </p>
-          <div className="hero-actions">
-            <Link className="button button-primary" to="/businesses">
-              Explorar negocios <Arrow />
-            </Link>
-            <Link className="text-link" to="/register">
-              Crear mi cuenta <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-          <div className="hero-note">
-            <span aria-hidden="true">✳</span>
-            <span>
-              Menos vueltas.
-              <br />
-              <strong>Más tiempo para ti.</strong>
-            </span>
-          </div>
+          <form
+            className="home-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const search = String(
+                new FormData(event.currentTarget).get('search') ?? '',
+              ).trim();
+              navigate(
+                `/businesses${search ? `?${new URLSearchParams({ search })}` : ''}`,
+              );
+            }}
+          >
+            <Input
+              id="home-search"
+              name="search"
+              label="¿Qué negocio buscas?"
+              type="search"
+              placeholder="Nombre del negocio"
+              maxLength={150}
+            />
+            <Button type="submit">Buscar negocios</Button>
+          </form>
+          <Link className="text-link" to="/businesses">
+            Ver todos los negocios →
+          </Link>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="art-orbit" />
-          <div className="art-caption">ELIGE CON CALMA</div>
-          <div className="art-card">
-            <span className="art-card-top">
-              TU PRÓXIMO MOMENTO <span>✳</span>
-            </span>
-            <div className="art-title">
-              Un buen día
-              <br />
-              empieza contigo.
-            </div>
-            <div className="art-week">
-              <span>L</span>
-              <span>M</span>
-              <span>X</span>
-              <span>J</span>
-              <span>V</span>
-            </div>
-            <div className="art-days">
-              <span>12</span>
-              <span>13</span>
-              <span className="selected">14</span>
-              <span>15</span>
-              <span>16</span>
-            </div>
-            <div className="art-service">
-              <span className="art-icon">✂</span>
+        <aside className="home-guide" aria-label="Cómo reservar">
+          <div className="home-guide-heading">
+            <span>Una cita, en tres pasos</span>
+            <span aria-hidden="true">01—03</span>
+          </div>
+          <ol>
+            <li>
+              <span>01</span>
               <div>
-                <strong>Algo de tiempo para ti</strong>
-                <small>El lugar y el equipo adecuados.</small>
+                <h2>Elige el servicio</h2>
+                <p>Revisa el precio, la duración y las reseñas del negocio.</p>
               </div>
-              <span>↗</span>
-            </div>
-          </div>
-          <div className="art-stamp">
-            <span>✦</span>Hecho para
-            <br />
-            tu día a día.
-          </div>
-          <div className="art-footer">
-            DESCUBRE · CONOCE · ELIGE <span>↗</span>
-          </div>
-        </div>
+            </li>
+            <li>
+              <span>02</span>
+              <div>
+                <h2>Encuentra un horario</h2>
+                <p>Selecciona al profesional y consulta su disponibilidad.</p>
+              </div>
+            </li>
+            <li>
+              <span>03</span>
+              <div>
+                <h2>Confirma tu reserva</h2>
+                <p>Inicia sesión y guarda la cita en tu cuenta.</p>
+              </div>
+            </li>
+          </ol>
+          <p className="home-guide-note">
+            Tus próximas citas y tu historial, en el mismo lugar.
+          </p>
+        </aside>
       </section>
-      <section className="how-section">
-        <div className="container">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">A TU RITMO</p>
-              <h2>El siguiente paso, más simple.</h2>
-            </div>
-            <p>
-              Información clara para tomar
-              <br />
-              una buena decisión.
-            </p>
-          </div>
-          <div className="steps-grid">
-            {[
-              {
-                number: '01',
-                title: 'Encuentra tu lugar',
-                text: 'Explora negocios y descubre servicios que encajan con lo que buscas.',
-              },
-              {
-                number: '02',
-                title: 'Conoce los detalles',
-                text: 'Consulta precios, conoce al equipo y lee experiencias de otros clientes.',
-              },
-              {
-                number: '03',
-                title: 'Crea tu espacio',
-                text: 'Abre tu cuenta y ten un lugar propio para tus próximas experiencias.',
-              },
-            ].map((step) => (
-              <article key={step.number}>
-                <span className="step-number">{step.number}</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section className="container closing-cta">
+      <section className="container home-workspaces">
         <div>
-          <p className="eyebrow">EMPIEZA POR DESCUBRIR</p>
-          <h2>
-            Tu próximo lugar favorito
-            <br />
-            puede estar aquí.
-          </h2>
+          <p className="eyebrow">PARA CLIENTES</p>
+          <h2>Ten tus citas a mano.</h2>
+          <p>
+            Consulta los detalles, cancela si cambian tus planes y comparte tu
+            experiencia después de la visita.
+          </p>
+          <Link className="text-link" to="/dashboard/appointments">
+            Ir a mis citas →
+          </Link>
         </div>
-        <Link to="/businesses" className="button button-primary">
-          Ver negocios <Arrow />
-        </Link>
+        <div>
+          <p className="eyebrow">PARA NEGOCIOS</p>
+          <h2>Organiza tu agenda.</h2>
+          <p>
+            Gestiona servicios, equipo, horarios y reservas desde el panel de tu
+            negocio.
+          </p>
+          <Link className="text-link" to="/dashboard/businesses">
+            Gestionar mi negocio →
+          </Link>
+        </div>
       </section>
     </>
   );
