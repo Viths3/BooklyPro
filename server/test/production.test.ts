@@ -138,6 +138,31 @@ test('HTTP security headers, allowed preflight and denied browser origins', asyn
       },
     });
     assert.equal(preflight.status, 204);
+    const schedulePreflight = await fetch(
+      url.replace(
+        '/health',
+        '/businesses/00000000-0000-4000-8000-000000000001/schedules',
+      ),
+      {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://booklypro.example.com',
+          'Access-Control-Request-Method': 'PUT',
+          'Access-Control-Request-Headers': 'authorization,content-type',
+        },
+      },
+    );
+    assert.equal(schedulePreflight.status, 204);
+    assert.equal(
+      schedulePreflight.headers.get('access-control-allow-origin'),
+      'https://booklypro.example.com',
+    );
+    assert.ok(
+      schedulePreflight.headers
+        .get('access-control-allow-methods')
+        ?.split(',')
+        .includes('PUT'),
+    );
     assert.match(
       preflight.headers.get('access-control-allow-headers') ?? '',
       /Authorization/,
