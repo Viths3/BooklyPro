@@ -1052,3 +1052,8 @@ https://github.com/Viths3
 ## CI/CD
 
 Flujo obligatorio por pull requests: feature/* → develop → main. Consulta [CI/CD y protecciones](docs/ci-cd.md).
+
+## Imágenes de negocios
+
+La carga de fotos de negocios utiliza Cloudinary con autorización del backend.
+Consulta [imágenes y configuración Railway](docs/image-uploads.md).

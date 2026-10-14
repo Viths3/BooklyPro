@@ -1,5 +1,12 @@
 # Deployment: BooklyPro Backend MVP
 
+## Carga de imágenes
+
+Cloudinary se configura exclusivamente en el servicio backend de Railway mediante
+CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET. No añadirlas al
+frontend ni a VITE_*. Sin las tres variables la carga permanece deshabilitada; no
+se necesitan migraciones. Véase [configuración y límites](image-uploads.md).
+
 ## Arquitectura
 
 Desarrollo: API local y PostgreSQL 17 en `docker-compose.yml`.

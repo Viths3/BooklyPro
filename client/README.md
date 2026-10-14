@@ -315,3 +315,12 @@ entorno. La API de producción documentada es https://booklypro-back.up.railway.
 la aplicación sigue obteniendo su URL exclusivamente de VITE_API_URL.
 Esta rama incluye la pasada de UI/UX pendiente para reutilizar sus componentes;
 ambas deben revisarse antes de integrarlas en develop/main.
+
+## Image upload
+
+Los negocios usan ImageUpload en lugar de un campo URL: selección/arrastre, vista
+previa, carga firmada, cancelar, reemplazar y eliminar. Se aceptan JPEG/PNG/WebP
+de hasta 5 MiB. Guardar se bloquea durante la carga y conserva la foto anterior si
+hay un error. EntityImage reutiliza placeholders en catálogo, detalle y panel.
+No hay nuevas variables VITE_* ni dependencias. Credenciales, restricciones reales
+y limpieza de archivos huérfanos: [guía de imágenes](../docs/image-uploads.md).
