@@ -1,4 +1,9 @@
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useRef, useState } from 'react';
+import {
+  ImageUpload,
+  type ImageUploadAction,
+} from '../../components/common/ImageUpload';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input } from '../../components/common/ui';
@@ -147,13 +152,17 @@ export function OwnerForm({
   busy,
   onSave,
   onClose,
+  uploadImage,
 }: {
   kind: FormKind;
   initial?: Record<string, string>;
   busy: boolean;
   onSave: (body: Record<string, unknown>) => void;
   onClose: () => void;
+  uploadImage?: ImageUploadAction;
 }) {
+  const [uploading, setUploading] = useState(false);
+  const uploadingRef = useRef(false);
   const parsedPhone = phoneParts(initial.phone);
   const {
     register,
@@ -165,6 +174,7 @@ export function OwnerForm({
     resolver: zodResolver(fieldsSchema(kind, initial.phone)),
     defaultValues: {
       ...initial,
+      imageUrl: initial.imageUrl ?? '',
       phone: parsedPhone.national,
       phoneCountry: parsedPhone.country,
     },
@@ -173,14 +183,36 @@ export function OwnerForm({
   return (
     <form
       className="owner-form"
-      onSubmit={handleSubmit((values) =>
-        onSave(formBody(kind, values, initial.phone)),
-      )}
+      onSubmit={(event) =>
+        void handleSubmit(
+          (values) =>
+            !uploadingRef.current &&
+            onSave(formBody(kind, values, initial.phone)),
+        )(event)
+      }
       noValidate
     >
       <fieldset disabled={busy}>
         {Object.entries(fields[kind]).map(([key, [label]]) =>
-          key === 'phone' ? (
+          key === 'imageUrl' ? (
+            <Controller
+              key={key}
+              name="imageUrl"
+              control={control}
+              render={({ field }) => (
+                <ImageUpload
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  upload={uploadImage}
+                  disabled={busy}
+                  onPendingChange={(pending) => {
+                    uploadingRef.current = pending;
+                    setUploading(pending);
+                  }}
+                />
+              )}
+            />
+          ) : key === 'phone' ? (
             <Controller
               key={key}
               name="phone"
@@ -264,7 +296,9 @@ export function OwnerForm({
           ),
         )}
         <div className="appointment-links">
-          <Button type="submit">{busy ? 'Guardando…' : 'Guardar'}</Button>
+          <Button type="submit" disabled={uploading}>
+            {busy ? 'Guardando…' : 'Guardar'}
+          </Button>
           <Button variant="secondary" onClick={onClose}>
             Cerrar formulario
           </Button>

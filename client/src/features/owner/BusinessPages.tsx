@@ -1,4 +1,6 @@
 import { SuccessMessage } from '../../components/common/Feedback';
+import { EntityImage } from '../../components/common/EntityImage';
+import { uploadBusinessImage } from '../../api/uploads';
 import { useState } from 'react';
 import {
   Link,
@@ -68,6 +70,9 @@ export function BusinessList() {
       {creating && !created && (
         <OwnerForm
           kind="business"
+          uploadImage={(file, signal) =>
+            uploadBusinessImage(session, file, signal)
+          }
           busy={mutation.isPending}
           onClose={() => setCreating(false)}
           onSave={(body) =>
@@ -112,6 +117,7 @@ export function BusinessList() {
         <div className="owner-grid">
           {query.data.map((b) => (
             <Card key={b.id}>
+              <EntityImage url={b.imageUrl} name={b.name} />
               <ActiveState active={b.active} />
               <h2>{b.name}</h2>
               <p>{b.address || 'Sin dirección'}</p>
@@ -235,6 +241,7 @@ function BusinessSummary() {
   );
 }
 export function BusinessOverview() {
+  const { session } = useAuth();
   const b = useOwnerBusiness();
   const mutation = useOwnerMutation(b.id, 'business');
   const [editing, setEditing] = useState(false);
@@ -244,6 +251,7 @@ export function BusinessOverview() {
       <h2>Resumen del negocio</h2>
       <BusinessSummary />
       <Card>
+        <EntityImage url={b.imageUrl} name={b.name} />
         <p>{b.description || 'Sin descripción'}</p>
         <p>{b.address}</p>
         <p>{b.phone}</p>
@@ -270,6 +278,9 @@ export function BusinessOverview() {
         {editing && (
           <OwnerForm
             kind="business"
+            uploadImage={(file, signal) =>
+              uploadBusinessImage(session, file, signal, b.id)
+            }
             initial={Object.fromEntries(
               ['name', 'description', 'phone', 'address', 'imageUrl'].map(
                 (key) => [key, String(b[key as keyof Business] ?? '')],
