@@ -1775,3 +1775,66 @@ select {
     padding: 1.25rem;
   }
 }
+
+.phone-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+.schedule-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 0.5rem;
+}
+.schedule-hint,
+.business-hours-context,
+.schedule-day-state {
+  color: #58677d;
+  font-size: 0.8rem;
+}
+.owner-week-row {
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+.schedule-day-state,
+.business-hours-context {
+  grid-column: 1 / -1;
+}
+.owner-week-row input[aria-disabled='true'] {
+  opacity: 0.6;
+  background: #edf2f8;
+}
+.owner-week-row > [role='alert'] {
+  grid-column: 1/-1;
+  color: #a53529;
+  font-size: 0.85rem;
+}
+.booking-progress {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  color: #245bc0;
+}
+.booking-option[aria-pressed='true']::after,
+.booking-slot[aria-pressed='true']::after {
+  content: '✓';
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+@media (max-width: 640px) {
+  .phone-control {
+    grid-template-columns: 1fr;
+  }
+  .owner-week-row {
+    grid-template-columns: 1fr 1fr;
+    background: white;
+    border: 1px solid #dfe5ed;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .schedule-tools .button {
+    flex: 1 1 200px;
+  }
+}

@@ -349,7 +349,9 @@ function BookingFlow({
                 : undefined
             }
             hint={
-              dateValid ? dateLabel(date) : 'Elige el día que mejor te venga.'
+              dateValid
+                ? `${dateLabel(date)} · ${timeZone}`
+                : `Elige hoy o una fecha posterior en ${timeZone}.`
             }
           />
         )}
@@ -367,10 +369,13 @@ function BookingFlow({
                 {dateLabel(date)} · {service?.name}
               </p>
               {availability.data.slots.length === 0 ? (
-                <EmptyState
-                  title="No hay horarios disponibles para esta fecha."
-                  description="Vuelve atrás y selecciona otra fecha."
-                />
+                <>
+                  <EmptyState
+                    title="No hay horarios disponibles para esta fecha."
+                    description="Vuelve atrás y selecciona otra fecha."
+                  />
+                  <Button onClick={() => setStep(2)}>Elegir otra fecha</Button>
+                </>
               ) : (
                 <TimeSlotSelector
                   slots={availability.data.slots}
@@ -396,6 +401,7 @@ function BookingFlow({
                 employee={employee}
                 date={date}
                 slot={startTime}
+                endTime={slot?.endTime}
                 notes={notes}
                 onNotes={setNotes}
                 onConfirm={(text) => void confirm(text)}

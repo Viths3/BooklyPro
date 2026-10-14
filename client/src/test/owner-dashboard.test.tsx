@@ -69,6 +69,7 @@ let employees: Employee[];
 let appointments: OwnerAppointment[];
 let conflict: boolean;
 let failList: boolean;
+let businessHoursOpen: boolean;
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -103,6 +104,7 @@ beforeEach(() => {
   ];
   conflict = false;
   failList = false;
+  businessHoursOpen = false;
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
     configurable: true,
     value: function (this: HTMLDialogElement) {
@@ -148,6 +150,21 @@ beforeEach(() => {
     }
     if (path.endsWith('/services/manage')) return json({ data: services });
     if (path.endsWith('/employees/manage')) return json({ data: employees });
+    if (
+      path === `/api/businesses/${bid}/schedules` &&
+      method === 'GET' &&
+      businessHoursOpen
+    )
+      return json({
+        data: [
+          {
+            dayOfWeek: 'MONDAY',
+            active: true,
+            openingTime: '09:00',
+            closingTime: '18:00',
+          },
+        ],
+      });
     if (path.endsWith('/schedules'))
       return method === 'GET'
         ? json({ data: [] })
@@ -428,6 +445,7 @@ describe('weekly schedules', () => {
     });
   });
   it('saves employee week with start and end fields', async () => {
+    businessHoursOpen = true;
     await setup(`${base}/schedules`);
     await userEvent.selectOptions(
       await screen.findByLabelText('Editar horario de'),
