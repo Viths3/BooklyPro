@@ -4,11 +4,10 @@ export function Brand() {
   return (
     <Link to="/" className="brand" aria-label="BooklyPro, inicio">
       <span className="brand-icon" aria-hidden="true">
-        b.
+        B
       </span>
       <span>
-        bookly<span className="font-normal">pro</span>
-        <span className="brand-dot">.</span>
+        Bookly<span className="brand-suffix">Pro</span>
       </span>
     </Link>
   );
@@ -48,9 +47,9 @@ export function PublicLayout() {
       <footer className="site-footer">
         <div className="container footer-inner">
           <Brand />
-          <p>Tu tiempo, bien elegido.</p>
+          <p>Reservas y gestión de negocios.</p>
           <Link to="/businesses">
-            Descubre tu próximo lugar <span aria-hidden="true">↗</span>
+            Explorar el catálogo <span aria-hidden="true">→</span>
           </Link>
         </div>
         <div className="container footer-bottom">
