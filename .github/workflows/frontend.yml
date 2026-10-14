@@ -6,6 +6,9 @@ on:
     branches: [main, develop]
 permissions:
   contents: read
+concurrency:
+  group: frontend-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   frontend:
     runs-on: ubuntu-latest
