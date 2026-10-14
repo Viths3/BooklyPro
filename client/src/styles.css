@@ -1401,3 +1401,94 @@
     border-color: #193e35;
   }
 }
+
+/* Owner workspace uses the existing cards, controls and color palette. */
+.owner-nav {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+.owner-nav a {
+  padding: 0.65rem 1rem;
+  border-radius: 2rem;
+  border: 1px solid #cdd5cc;
+}
+.owner-nav a.active {
+  background: #163e35;
+  color: white;
+}
+.owner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.owner-state {
+  display: inline-block;
+  font-size: 0.85rem;
+  border: 1px solid #cdd5cc;
+  padding: 0.2rem 0.7rem;
+  border-radius: 1rem;
+}
+.owner-form {
+  margin: 1rem 0;
+}
+.owner-form fieldset,
+.owner-week-row {
+  border: 0;
+  padding: 0;
+}
+.owner-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.6rem 0;
+}
+.owner-assignments {
+  margin-top: 1.5rem;
+  border-top: 1px solid #cdd5cc;
+  padding-top: 1rem;
+}
+.owner-assignments > button {
+  margin: 0.25rem;
+}
+.owner-week-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin: 1rem 0;
+}
+.owner-week-row label,
+.owner-filters label {
+  display: grid;
+  gap: 0.4rem;
+}
+.owner-week-row label:first-child {
+  display: flex;
+  align-items: center;
+}
+.owner-week-row input[type='checkbox'] {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+.owner-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+  margin: 1.5rem 0;
+}
+@media (max-width: 640px) {
+  .owner-week-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .owner-week-row label:first-child {
+    grid-column: 1/-1;
+  }
+  .owner-filters > * {
+    width: 100%;
+  }
+}

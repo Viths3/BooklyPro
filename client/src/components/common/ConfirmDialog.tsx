@@ -4,10 +4,18 @@ export function ConfirmDialog({
   busy,
   onClose,
   onConfirm,
+  title = '¿Seguro que quieres cancelar esta cita?',
+  description = 'El horario quedará disponible. Esta acción no se puede deshacer.',
+  confirmLabel = 'Sí, cancelar cita',
+  closeLabel = 'Conservar cita',
 }: {
   busy: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
+  closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -30,19 +38,17 @@ export function ConfirmDialog({
         if (!busy) onClose();
       }}
     >
-      <h2 id="cancel-title">¿Seguro que quieres cancelar esta cita?</h2>
-      <p id="cancel-description">
-        El horario quedará disponible. Esta acción no se puede deshacer.
-      </p>
+      <h2 id="cancel-title">{title}</h2>
+      <p id="cancel-description">{description}</p>
       <div className="appointment-links">
         <Button variant="secondary" disabled={busy} onClick={onClose} autoFocus>
-          Conservar cita
+          {closeLabel}
         </Button>
         <Button disabled={busy} onClick={onConfirm}>
-          {busy ? 'Cancelando…' : 'Sí, cancelar cita'}
+          {busy ? 'Guardando…' : confirmLabel}
         </Button>
       </div>
-      {busy && <p role="status">Cancelando tu cita…</p>}
+      {busy && <p role="status">Guardando cambios…</p>}
     </dialog>
   );
 }

@@ -71,6 +71,14 @@ export class SessionManager {
       body: input,
     });
   }
+  async syncUser() {
+    const revision = this.revision;
+    const user = userSchema.parse(
+      (await this.request<ApiResponse<User>>('/api/auth/me')).data,
+    );
+    if (revision === this.revision)
+      this.setState({ status: 'authenticated', user });
+  }
   private refresh() {
     if (this.refreshing) return this.refreshing;
     if (!this.refreshToken)
