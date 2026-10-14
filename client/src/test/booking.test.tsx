@@ -271,8 +271,9 @@ describe('booking wizard', () => {
     expect(
       await screen.findByText('No hay horarios disponibles para esta fecha.'),
     ).toBeVisible();
-    await click('Atrás');
+    await click('Elegir otra fecha');
     expect(await screen.findByLabelText('Fecha de la cita')).toBeVisible();
+    expect(screen.getByLabelText('Fecha de la cita')).toHaveValue(date);
   });
   it('changing date clears selected slot', async () => {
     await setup();
@@ -323,7 +324,7 @@ describe('booking wizard', () => {
       'Corte clásico',
       'Carlos Mora',
       '15 de octubre de 2099',
-      '10:30 · America/Guayaquil',
+      '10:30 – 11:00 · America/Guayaquil',
       '30 min',
       '8.00 USD',
     ])
@@ -354,7 +355,7 @@ describe('booking wizard', () => {
       await screen.findByRole('button', { name: 'Confirmar cita' }),
     ).toBeVisible();
     expect(screen.getByLabelText('Notas (opcional)')).toHaveValue('');
-    expect(screen.getByText('10:30 · America/Guayaquil')).toBeVisible();
+    expect(screen.getByText('10:30 – 11:00 · America/Guayaquil')).toBeVisible();
     expect(calls('/api/appointments')).toHaveLength(0);
   });
   it('authenticated confirmation creates the exact body and displays PENDING success', async () => {
