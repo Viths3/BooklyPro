@@ -28,6 +28,13 @@ export const environmentSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).optional(),
     DATABASE_URL: z.url().refine((value) => /^postgres(ql)?:\/\//.test(value)),
     CORS_ORIGINS: origins.optional(),
+    CLOUDINARY_CLOUD_NAME: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/)
+      .optional()
+      .or(z.literal('')),
+    CLOUDINARY_API_KEY: z.string().regex(/^\d+$/).optional().or(z.literal('')),
+    CLOUDINARY_API_SECRET: z.string().optional(),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
     AVAILABILITY_SLOT_INTERVAL_MINUTES: z.coerce
       .number()
@@ -37,6 +44,18 @@ export const environmentSchema = z
       .default(15),
   })
   .superRefine((value, context) => {
+    const cloudinary = [
+      value.CLOUDINARY_CLOUD_NAME,
+      value.CLOUDINARY_API_KEY,
+      value.CLOUDINARY_API_SECRET,
+    ];
+    if (cloudinary.some(Boolean) && !cloudinary.every(Boolean)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['CLOUDINARY'],
+        message: 'Configure all three Cloudinary variables or omit all of them',
+      });
+    }
     if (value.NODE_ENV === 'production' && value.PORT === undefined) {
       context.addIssue({
         code: 'custom',
