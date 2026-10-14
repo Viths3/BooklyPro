@@ -232,6 +232,35 @@ function BookingFlow({
         {titles[visibleStep]}
       </h1>
       <p className="muted">Todos los horarios corresponden a {timeZone}.</p>
+      {visibleStep > 0 && visibleStep < 4 && (
+        <dl className="booking-context" aria-label="Selección de la reserva">
+          {service && (
+            <div>
+              <dt>Servicio</dt>
+              <dd>
+                {service.name} · {service.price} {business.currency}
+              </dd>
+            </div>
+          )}
+          {employee && (
+            <div>
+              <dt>Profesional</dt>
+              <dd>
+                {employee.firstName} {employee.lastName}
+              </dd>
+            </div>
+          )}
+          {dateValid && (
+            <div>
+              <dt>Fecha</dt>
+              <dd>
+                {dateLabel(date)}
+                {startTime ? ` · ${startTime}` : ''}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
       {notice && (
         <p role="alert" className="notice">
           {notice}
@@ -320,7 +349,9 @@ function BookingFlow({
                 : undefined
             }
             hint={
-              dateValid ? dateLabel(date) : 'Elige el día que mejor te venga.'
+              dateValid
+                ? `${dateLabel(date)} · ${timeZone}`
+                : `Elige hoy o una fecha posterior en ${timeZone}.`
             }
           />
         )}
@@ -338,10 +369,13 @@ function BookingFlow({
                 {dateLabel(date)} · {service?.name}
               </p>
               {availability.data.slots.length === 0 ? (
-                <EmptyState
-                  title="No hay horarios disponibles para esta fecha."
-                  description="Vuelve atrás y selecciona otra fecha."
-                />
+                <>
+                  <EmptyState
+                    title="No hay horarios disponibles para esta fecha."
+                    description="Vuelve atrás y selecciona otra fecha."
+                  />
+                  <Button onClick={() => setStep(2)}>Elegir otra fecha</Button>
+                </>
               ) : (
                 <TimeSlotSelector
                   slots={availability.data.slots}
@@ -367,6 +401,7 @@ function BookingFlow({
                 employee={employee}
                 date={date}
                 slot={startTime}
+                endTime={slot?.endTime}
                 notes={notes}
                 onNotes={setNotes}
                 onConfirm={(text) => void confirm(text)}

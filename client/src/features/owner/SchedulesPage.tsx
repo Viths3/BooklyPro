@@ -1,6 +1,7 @@
+import { Select } from '../../components/common/Select';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, ErrorMessage, Loading } from '../../components/common/ui';
@@ -36,6 +37,42 @@ export const weekSchema = z.object({
     .length(7),
 });
 type Week = z.infer<typeof weekSchema>;
+export function scheduleSchema(businessWeek?: Week) {
+  return weekSchema.superRefine((week, ctx) => {
+    if (!businessWeek) return;
+    week.days.forEach((day, i) => {
+      const opening = businessWeek.days.find(
+        (row) => row.dayOfWeek === day.dayOfWeek,
+      );
+      if (
+        day.active &&
+        (!opening?.active || day.start < opening.start || day.end > opening.end)
+      )
+        ctx.addIssue({
+          code: 'custom',
+          path: ['days', i, 'end'],
+          message: opening?.active
+            ? `El horario del empleado debe estar dentro del horario del negocio: ${opening.start}–${opening.end}.`
+            : 'El negocio está cerrado este día. Desactiva el día del empleado o actualiza primero el horario del negocio.',
+        });
+    });
+  });
+}
+export function copyMonday(week: Week): Week {
+  const monday = week.days[0]!;
+  return {
+    days: week.days.map((day, i) =>
+      i > 0 && i < 5
+        ? {
+            ...day,
+            active: monday.active,
+            start: monday.start,
+            end: monday.end,
+          }
+        : { ...day },
+    ),
+  };
+}
 export function scheduleBody(week: Week, employee: boolean) {
   return {
     schedules: week.days.map(({ dayOfWeek, active, start, end }) => ({
@@ -51,22 +88,28 @@ function WeekForm({
   initial,
   employee,
   path,
+  businessWeek,
 }: {
   initial: Week;
   employee: boolean;
   path: string;
+  businessWeek?: Week;
 }) {
   const b = useOwnerBusiness();
   const mutation = useOwnerMutation(b.id, 'schedules');
   const {
     register,
+    control,
+    getValues,
+    setValue,
     handleSubmit,
     formState: { errors, isDirty },
     reset,
   } = useForm<Week>({
-    resolver: zodResolver(weekSchema),
+    resolver: zodResolver(scheduleSchema(businessWeek)),
     defaultValues: initial,
   });
+  const current = useWatch({ control, name: 'days' });
   return (
     <form
       onSubmit={handleSubmit((week) =>
@@ -81,16 +124,66 @@ function WeekForm({
           {employee ? 'Horario del empleado' : 'Horario del negocio'} ·{' '}
           {b.timeZone}
         </legend>
+        <div className="schedule-tools">
+          <Button
+            variant="secondary"
+            onClick={() =>
+              setValue('days', copyMonday(getValues()).days, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          >
+            Copiar lunes a martes–viernes
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              setValue(
+                'days',
+                getValues('days').map((day) => ({ ...day, active: false })),
+                { shouldDirty: true, shouldValidate: true },
+              )
+            }
+          >
+            Cerrar toda la semana
+          </Button>
+        </div>
+        <p className="schedule-hint">
+          Los cambios se aplican al pulsar Guardar semana.
+        </p>
         {days.map((day, i) => (
           <div className="owner-week-row" key={day}>
             <label>
               <input type="checkbox" {...register(`days.${i}.active`)} />
               {dayLabels[i]} abierto
             </label>
+            <span className="schedule-day-state">
+              {current[i]?.active
+                ? employee
+                  ? 'Disponible'
+                  : 'Abierto'
+                : 'Cerrado'}
+            </span>
+            {businessWeek && (
+              <p className="business-hours-context">
+                Negocio:{' '}
+                {businessWeek.days[i]?.active
+                  ? `${businessWeek.days[i]!.start}–${businessWeek.days[i]!.end}`
+                  : 'Cerrado'}
+              </p>
+            )}
             <label>
               {employee ? 'Inicio' : 'Apertura'} {dayLabels[i]}
               <input
                 type="time"
+                readOnly={!current[i]?.active}
+                aria-disabled={!current[i]?.active}
+                aria-describedby={
+                  errors.days?.[i]?.start || errors.days?.[i]?.end
+                    ? `schedule-${day}-error`
+                    : undefined
+                }
                 {...register(`days.${i}.start`)}
                 aria-invalid={Boolean(errors.days?.[i]?.start)}
               />
@@ -99,12 +192,19 @@ function WeekForm({
               {employee ? 'Fin' : 'Cierre'} {dayLabels[i]}
               <input
                 type="time"
+                readOnly={!current[i]?.active}
+                aria-disabled={!current[i]?.active}
+                aria-describedby={
+                  errors.days?.[i]?.start || errors.days?.[i]?.end
+                    ? `schedule-${day}-error`
+                    : undefined
+                }
                 {...register(`days.${i}.end`)}
                 aria-invalid={Boolean(errors.days?.[i]?.end)}
               />
             </label>
             {(errors.days?.[i]?.start || errors.days?.[i]?.end) && (
-              <p role="alert">
+              <p role="alert" id={`schedule-${day}-error`}>
                 {errors.days?.[i]?.start?.message ||
                   errors.days?.[i]?.end?.message}
               </p>
@@ -124,7 +224,7 @@ function WeekForm({
       ) : (
         mutation.error && <ErrorMessage error={mutation.error} />
       )}
-      {mutation.isSuccess && <p role="status">Horario guardado.</p>}
+      {mutation.isSuccess && !isDirty && <p role="status">Horario guardado.</p>}
     </form>
   );
 }
@@ -161,13 +261,50 @@ function WeekEditor({ employeeId }: { employeeId: string }) {
       };
     },
   });
+  const businessHours = useQuery({
+    queryKey: ownerKeys.section(user!.id, b.id, 'schedules', ''),
+    enabled: Boolean(employeeId),
+    queryFn: async ({ signal }) => {
+      const rows = await readList(
+        session,
+        `/api/businesses/${b.id}/schedules`,
+        businessDaySchema,
+        signal,
+      );
+      return {
+        days: days.map((day) => {
+          const row = rows.find((item) => item.dayOfWeek === day);
+          return {
+            dayOfWeek: day,
+            active: row?.active ?? false,
+            start: row?.openingTime ?? '09:00',
+            end: row?.closingTime ?? '18:00',
+          };
+        }),
+      };
+    },
+  });
+  if (employeeId && businessHours.isPending)
+    return <Loading label="Consultando el horario del negocio…" />;
+  if (employeeId && businessHours.error)
+    return (
+      <ErrorMessage
+        error={businessHours.error}
+        onRetry={() => void businessHours.refetch()}
+      />
+    );
   if (query.isPending) return <Loading />;
   if (query.error)
     return (
       <ErrorMessage error={query.error} onRetry={() => void query.refetch()} />
     );
   return (
-    <WeekForm initial={query.data} employee={Boolean(employeeId)} path={path} />
+    <WeekForm
+      initial={query.data}
+      employee={Boolean(employeeId)}
+      path={path}
+      businessWeek={employeeId ? businessHours.data : undefined}
+    />
   );
 }
 export function SchedulesPage() {
@@ -187,21 +324,20 @@ export function SchedulesPage() {
       ) : employees.error ? (
         <ErrorMessage error={employees.error} />
       ) : (
-        <label>
-          Editar horario de
-          <select
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-          >
-            <option value="">Negocio</option>
-            {employees.data.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.firstName} {e.lastName}
-                {e.active ? '' : ' (inactivo)'}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          id="schedule-employee"
+          label="Editar horario de"
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value)}
+        >
+          <option value="">Negocio</option>
+          {employees.data.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.firstName} {e.lastName}
+              {e.active ? '' : ' (inactivo)'}
+            </option>
+          ))}
+        </Select>
       )}
       {!b.active ? (
         <p>

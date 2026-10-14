@@ -73,6 +73,7 @@ export function LoginPage() {
         <form onSubmit={handleSubmit(submit)} noValidate>
           {error !== null && <ErrorMessage error={error} />}
           <Input
+            required
             id="login-email"
             label="Correo electrónico"
             type="email"
@@ -81,6 +82,7 @@ export function LoginPage() {
             error={errors.email?.message}
           />
           <Input
+            required
             id="login-password"
             label="Contraseña"
             type="password"
@@ -150,6 +152,7 @@ export function RegisterPage() {
           {error !== null && <ErrorMessage error={error} />}
           <div className="form-row">
             <Input
+              required
               id="first-name"
               label="Nombre"
               autoComplete="given-name"
@@ -157,6 +160,7 @@ export function RegisterPage() {
               error={errors.firstName?.message}
             />
             <Input
+              required
               id="last-name"
               label="Apellido"
               autoComplete="family-name"
@@ -165,6 +169,7 @@ export function RegisterPage() {
             />
           </div>
           <Input
+            required
             id="register-email"
             label="Correo electrónico"
             type="email"
@@ -173,6 +178,7 @@ export function RegisterPage() {
             error={errors.email?.message}
           />
           <Input
+            required
             id="register-password"
             label="Contraseña"
             type="password"

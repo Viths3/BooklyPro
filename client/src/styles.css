@@ -1605,3 +1605,236 @@ select {
 .owner-week-row:last-of-type {
   margin-bottom: 1rem;
 }
+
+/* Accessible shared states and resilient small-screen layouts. */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 0.25rem 0.6rem;
+}
+.status-marker {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.status-active,
+.status-completed {
+  background: #e6f3ec;
+  color: #215a3e;
+}
+.status-inactive {
+  background: #eaecf0;
+  color: #475467;
+}
+.button-danger {
+  background: #a52b25;
+  color: #fff;
+}
+.button-danger:hover:not(:disabled) {
+  background: #84201b;
+}
+.success-message {
+  color: #215a3e;
+  background: #edf7f0;
+  border-color: #b7d6c1;
+  margin-block: 1rem;
+}
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #ccd5e1;
+  border-radius: 6px;
+  background: white;
+  resize: vertical;
+}
+.field select {
+  width: 100%;
+}
+.field .required-hint {
+  color: #58677d;
+  font-size: 0.7rem;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #245bc0;
+}
+.booking-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  background: #edf2f8;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+.booking-context dt {
+  font-size: 0.75rem;
+  color: #58677d;
+}
+.booking-context dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.business-card,
+.card,
+.booking-option,
+.business-hero > *,
+.owner-grid > *,
+.form-row > * {
+  min-width: 0;
+}
+.business-card h2,
+.card h3,
+.detail-description,
+.contact-list,
+.booking-option,
+.owner-row,
+.dashboard-content h1,
+.business-hero h1 {
+  overflow-wrap: anywhere;
+}
+.button {
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.detail-nav {
+  flex-wrap: wrap;
+}
+.owner-filters .field {
+  flex: 1 1 140px;
+}
+.owner-row > span {
+  flex: 1 1 160px;
+}
+.appointment-price {
+  font-variant-numeric: tabular-nums;
+}
+.owner-form textarea[aria-invalid='true'] {
+  border-color: #a53529;
+}
+@media (max-width: 375px) {
+  .container {
+    width: calc(100% - 32px);
+  }
+  .header-inner nav {
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .header-inner nav .button {
+    padding: 0.6rem 0.75rem;
+  }
+  .dashboard-header {
+    flex-wrap: wrap;
+  }
+  .dashboard-content {
+    padding: 1.25rem 1rem;
+  }
+  .card,
+  .business-card-body,
+  .booking-option {
+    padding: 1rem;
+  }
+  .auth-form-panel {
+    padding: 1.5rem 1rem;
+  }
+  .service-card {
+    flex-wrap: wrap;
+  }
+  .booking-stepper {
+    gap: 0.6rem;
+  }
+  .booking-stepper li {
+    font-size: 0.75rem;
+  }
+  .booking-context {
+    flex-direction: column;
+  }
+  .owner-week-row {
+    gap: 0.75rem;
+  }
+  .owner-week-row input[type='time'] {
+    padding: 0.5rem 0.35rem;
+  }
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .confirm-dialog {
+    padding: 1.25rem;
+  }
+}
+
+.phone-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+.schedule-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 0.5rem;
+}
+.schedule-hint,
+.business-hours-context,
+.schedule-day-state {
+  color: #58677d;
+  font-size: 0.8rem;
+}
+.owner-week-row {
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+.schedule-day-state,
+.business-hours-context {
+  grid-column: 1 / -1;
+}
+.owner-week-row input[aria-disabled='true'] {
+  opacity: 0.6;
+  background: #edf2f8;
+}
+.owner-week-row > [role='alert'] {
+  grid-column: 1/-1;
+  color: #a53529;
+  font-size: 0.85rem;
+}
+.booking-progress {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  color: #245bc0;
+}
+.booking-option[aria-pressed='true']::after,
+.booking-slot[aria-pressed='true']::after {
+  content: '✓';
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+@media (max-width: 640px) {
+  .phone-control {
+    grid-template-columns: 1fr;
+  }
+  .owner-week-row {
+    grid-template-columns: 1fr 1fr;
+    background: white;
+    border: 1px solid #dfe5ed;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .schedule-tools .button {
+    flex: 1 1 200px;
+  }
+}

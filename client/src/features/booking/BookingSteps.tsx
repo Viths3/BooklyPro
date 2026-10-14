@@ -9,18 +9,24 @@ import type { BookedAppointment } from './api';
 const steps = ['Servicio', 'Profesional', 'Fecha', 'Horario', 'Resumen'];
 export function BookingStepper({ step }: { step: number }) {
   return (
-    <ol className="booking-stepper" aria-label="Pasos de la reserva">
-      {steps.map((name, index) => (
-        <li
-          key={name}
-          aria-current={index === step ? 'step' : undefined}
-          className={index <= step ? 'reached' : ''}
-        >
-          <span aria-hidden="true">{index + 1}</span>
-          {name}
-        </li>
-      ))}
-    </ol>
+    <>
+      <p className="booking-progress" role="status">
+        Paso {step + 1} de {steps.length} · {steps[step]}
+        {steps[step + 1] ? ` · Después: ${steps[step + 1]}` : ''}
+      </p>
+      <ol className="booking-stepper" aria-label="Pasos de la reserva">
+        {steps.map((name, index) => (
+          <li
+            key={name}
+            aria-current={index === step ? 'step' : undefined}
+            className={index <= step ? 'reached' : ''}
+          >
+            <span aria-hidden="true">{index + 1}</span>
+            {name}
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 export function ServiceSelector({
@@ -117,6 +123,7 @@ export function BookingSummary({
   employee,
   date,
   slot,
+  endTime,
   notes,
   onNotes,
   onConfirm,
@@ -128,6 +135,7 @@ export function BookingSummary({
   employee: Employee;
   date: string;
   slot: string;
+  endTime?: string;
   notes: string;
   onNotes: (value: string) => void;
   onConfirm: (notes: string) => void;
@@ -166,7 +174,8 @@ export function BookingSummary({
         <div>
           <dt>Hora</dt>
           <dd>
-            {slot} · {business.timeZone}
+            {slot}
+            {endTime ? ` – ${endTime}` : ''} · {business.timeZone}
           </dd>
         </div>
         <div>

@@ -1,17 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/common/ui';
-import {
-  appointmentDate,
-  statusLabels,
-  type Status,
-  type Appointment,
-} from './api';
+import { appointmentDate, type Status, type Appointment } from './api';
+import { StatusBadge } from '../../components/common/StatusBadge';
 export function AppointmentStatusBadge({ status }: { status: Status }) {
-  return (
-    <span className={`badge appointment-status status-${status.toLowerCase()}`}>
-      {statusLabels[status]}
-    </span>
-  );
+  return <StatusBadge status={status} />;
 }
 export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   const { business, service, employee, startTime } = appointment;
@@ -29,6 +21,11 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
         </time>
       </p>
       <small>{business.timeZone}</small>
+      {appointment.priceAtBooking !== undefined && (
+        <p className="appointment-price">
+          Importe reservado: <strong>{appointment.priceAtBooking}</strong>
+        </p>
+      )}
       <Link
         className="text-link"
         to={`/dashboard/appointments/${appointment.id}`}
