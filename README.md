@@ -1048,3 +1048,7 @@ Ecuador
 GitHub:
 
 https://github.com/Viths3
+
+## CI/CD
+
+Flujo obligatorio por pull requests: feature/* → develop → main. Consulta [CI/CD y protecciones](docs/ci-cd.md).

@@ -1,0 +1,31 @@
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  branch-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Enforce feature to develop and develop to main
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          if [[ "$BASE_BRANCH" == "develop" && "$HEAD_BRANCH" == feature/?* ]]; then
+            echo "Feature PR targets develop."
+          elif [[ "$BASE_BRANCH" == "main" && "$HEAD_BRANCH" == "develop" && "$HEAD_REPOSITORY" == "$REPOSITORY" ]]; then
+            echo "Release PR promotes this repository's develop branch."
+          else
+            echo "::error::Required flow: feature/<task> -> develop -> main."
+            exit 1
+          fi

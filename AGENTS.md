@@ -10,8 +10,10 @@
 - Hacer commits pequenos y descriptivos con prefijos `feat:`, `fix:`, `refactor:`, `docs:`, `test:` o `chore:`.
 - Antes de integrar, revisar `git status`, `git diff` y `git diff --cached`, y ejecutar las verificaciones pertinentes.
 - Publicar la feature con `git push -u origin feature/nombre` antes de integrarla.
-- Actualizar `develop` con pull fast-forward, integrar con `git merge --no-ff feature/nombre` y publicar `develop`.
-- Cuando una fase este estable y comprobada, actualizar `main`, integrar `develop` con `--no-ff`, publicar y volver a `develop`.
+- Abrir un pull request de `feature/nombre` hacia `develop`. Esperar los checks obligatorios `backend`, `frontend` y `branch-policy`; integrar mediante merge commit en GitHub. No hacer push directo a `develop` ni usar bypass de administrador.
+- Cuando una fase este estable y comprobada, abrir un PR de `develop` hacia `main`. Esperar los mismos checks y promover explicitamente mediante merge commit. No hacer push directo a `main`, ni activar auto-merge para releases. Volver a `develop` y actualizar con pull fast-forward.
+- Si GitHub exige actualizar una rama, incorporar la base en la feature y repetir CI. Si `develop` necesita incorporar el historial de `main`, hacerlo mediante una feature de sincronizacion y PR a `develop`, nunca mediante push directo.
+- La aprobacion de CI es obligatoria para cualquier tarea, incluso documentacion y configuracion. No omitir workflows por rutas. Las pruebas locales enfocadas sirven para desarrollar; GitHub ejecuta la suite completa antes de integrar.
 - No usar force push ni reescribir el historial de `main`. No descartar trabajo ajeno para resolver conflictos.
 - Solo eliminar ramas despues de confirmar que su trabajo esta integrado; usar `git branch -d` para borrado local.
 - No versionar `.env`, credenciales, tokens, `node_modules`, compilados ni cliente Prisma generado.
