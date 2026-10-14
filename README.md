@@ -8,7 +8,7 @@ BooklyPro permite a clientes descubrir negocios, consultar servicios y empleados
 
 Frontend:
 
-https://booklypro-web-production.up.railway.app
+https://booklypro.up.railway.app
 
 API:
 
@@ -735,7 +735,7 @@ https://booklypro-back.up.railway.app
 Frontend:
 
 ```text
-https://booklypro-web-production.up.railway.app
+https://booklypro.up.railway.app
 ```
 
 El backend utiliza:
