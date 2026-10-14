@@ -56,6 +56,13 @@ Se crearán carpetas adicionales por feature cuando tengan lógica propia, no
 directorios vacíos. Los estilos comunes definen la base visual sin un sistema de
 diseño excesivo. Se respetan navegación por teclado y reduced-motion.
 
+La interfaz utiliza Arial con fallback Helvetica Neue/sans-serif, sin cargar
+fuentes externas. Títulos y texto comparten la misma familia, con tamaños y pesos
+distintos. La paleta combina superficies blancas/grises con azul para acciones y
+selección. La portada ofrece búsqueda por nombre y accesos a citas y negocios;
+los paneles usan pestañas, formularios y controles de horario con el mismo estilo.
+La revisión visual se realiza en escritorio y móvil antes de publicar la rama.
+
 ## Rutas y datos
 
 Públicas: `/`, `/login`, `/register`, `/businesses`, `/businesses/:businessId`.
