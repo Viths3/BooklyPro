@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-    preview: {
+  preview: {
     allowedHosts: ['booklypro-web-production.up.railway.app'],
   },
   test: {
