@@ -59,7 +59,9 @@ Backend preparado para:
 - Consultar citas de un negocio.
 - Gestionar estados de citas.
 
-El dashboard completo del propietario se encuentra entre las siguientes fases de desarrollo.
+El dashboard del propietario permite gestionar negocios, servicios, empleados,
+asignaciones, horarios semanales y estados de reservas. Consulta las rutas,
+contratos y límites en [Business Owner Dashboard](client/README.md#business-owner-dashboard).
 
 ---
 
@@ -1000,12 +1002,6 @@ Las versiones estables se promueven de `develop` a `main`.
 
 Próximas fases previstas:
 
-- Dashboard completo para propietarios.
-- Gestión frontend de negocios.
-- Gestión frontend de servicios.
-- Gestión frontend de empleados.
-- Editor visual de horarios.
-- Gestión de citas para propietarios.
 - Mejoras visuales y de UX.
 - Notificaciones.
 - Métricas del negocio.
@@ -1035,7 +1031,9 @@ PostgreSQL
 Deployment en Railway
 ```
 
-El desarrollo continúa principalmente sobre las herramientas administrativas del propietario.
+La rama `feature/business-owner-dashboard` incorpora las herramientas administrativas
+del propietario. Su publicación en Railway requiere revisión e integración posterior
+en la rama estable; crear la feature no despliega estos cambios en producción.
 
 ---
 
