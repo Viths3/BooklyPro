@@ -1,3 +1,4 @@
+import { Select } from '../../components/common/Select';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -187,21 +188,20 @@ export function SchedulesPage() {
       ) : employees.error ? (
         <ErrorMessage error={employees.error} />
       ) : (
-        <label>
-          Editar horario de
-          <select
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-          >
-            <option value="">Negocio</option>
-            {employees.data.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.firstName} {e.lastName}
-                {e.active ? '' : ' (inactivo)'}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          id="schedule-employee"
+          label="Editar horario de"
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value)}
+        >
+          <option value="">Negocio</option>
+          {employees.data.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.firstName} {e.lastName}
+              {e.active ? '' : ' (inactivo)'}
+            </option>
+          ))}
+        </Select>
       )}
       {!b.active ? (
         <p>

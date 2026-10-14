@@ -1,3 +1,4 @@
+import { SuccessMessage } from '../../components/common/Feedback';
 import { useState } from 'react';
 import {
   Link,
@@ -31,9 +32,10 @@ import {
 } from './hooks';
 import { OwnerForm } from './OwnerForm';
 import { appointmentDate } from '../appointments/api';
+import { StatusBadge } from '../../components/common/StatusBadge';
 
 export function ActiveState({ active }: { active: boolean }) {
-  return <span className="owner-state">{active ? 'Activo' : 'Inactivo'}</span>;
+  return <StatusBadge status={active ? 'ACTIVE' : 'INACTIVE'} />;
 }
 export function BusinessList() {
   const query = useOwnedBusinesses();
@@ -282,6 +284,9 @@ export function BusinessOverview() {
               )
             }
           />
+        )}
+        {mutation.isSuccess && (
+          <SuccessMessage>Negocio actualizado.</SuccessMessage>
         )}
         {mutation.error && <ErrorMessage error={mutation.error} />}
       </Card>

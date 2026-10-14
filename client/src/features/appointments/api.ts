@@ -21,6 +21,7 @@ const appointmentSchema = z.object({
   endTime: z.iso.datetime(),
   status: z.enum(statuses),
   notes: z.string().nullable(),
+  priceAtBooking: z.string().optional(),
   business: z.object({
     id: z.string(),
     name: z.string(),
