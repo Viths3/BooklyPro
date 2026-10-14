@@ -1,3 +1,4 @@
+import { SuccessMessage } from '../../components/common/Feedback';
 import { useState } from 'react';
 import {
   Button,
@@ -70,6 +71,9 @@ function Assignments({ employee }: { employee: Employee }) {
         <p>
           Activa el empleado en un negocio activo para asignar nuevos servicios.
         </p>
+      )}
+      {mutation.isSuccess && (
+        <SuccessMessage>Cambios guardados.</SuccessMessage>
       )}
       {mutation.error && <ErrorMessage error={mutation.error} />}
     </div>
@@ -149,6 +153,9 @@ function Catalog({
             }
           />
         </Card>
+      )}
+      {mutation.isSuccess && (
+        <SuccessMessage>Cambios guardados.</SuccessMessage>
       )}
       {mutation.error && <ErrorMessage error={mutation.error} />}
       {loading ? (

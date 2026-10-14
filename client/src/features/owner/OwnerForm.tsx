@@ -130,22 +130,62 @@ export function OwnerForm({
       noValidate
     >
       <fieldset disabled={busy}>
-        {Object.entries(fields[kind]).map(([key, [label]]) => (
-          <Input
-            key={key}
-            id={`owner-${key}`}
-            label={label}
-            {...register(key)}
-            error={errors[key]?.message}
-            inputMode={
-              key === 'price'
-                ? 'decimal'
-                : key === 'durationMinutes'
-                  ? 'numeric'
-                  : undefined
-            }
-          />
-        ))}
+        {Object.entries(fields[kind]).map(([key, [label]]) =>
+          key === 'description' ? (
+            <div className="field" key={key}>
+              <label htmlFor="owner-description">{label}</label>
+              <textarea
+                id="owner-description"
+                rows={4}
+                maxLength={5000}
+                {...register(key)}
+                aria-invalid={Boolean(errors[key])}
+                aria-describedby="owner-description-help"
+              />
+              <small id="owner-description-help">
+                {errors[key]?.message || 'Opcional. Máximo 5000 caracteres.'}
+              </small>
+            </div>
+          ) : (
+            <Input
+              key={key}
+              id={`owner-${key}`}
+              label={label}
+              required={[
+                'name',
+                'firstName',
+                'lastName',
+                'price',
+                'durationMinutes',
+              ].includes(key)}
+              hint={
+                key === 'price'
+                  ? 'Usa punto decimal, por ejemplo 8.50.'
+                  : key === 'durationMinutes'
+                    ? 'Entre 1 y 1440 minutos, sin decimales.'
+                    : undefined
+              }
+              type={
+                key === 'email'
+                  ? 'email'
+                  : key === 'phone'
+                    ? 'tel'
+                    : key === 'imageUrl'
+                      ? 'url'
+                      : 'text'
+              }
+              {...register(key)}
+              error={errors[key]?.message}
+              inputMode={
+                key === 'price'
+                  ? 'decimal'
+                  : key === 'durationMinutes'
+                    ? 'numeric'
+                    : undefined
+              }
+            />
+          ),
+        )}
         <div className="appointment-links">
           <Button type="submit">{busy ? 'Guardando…' : 'Guardar'}</Button>
           <Button variant="secondary" onClick={onClose}>

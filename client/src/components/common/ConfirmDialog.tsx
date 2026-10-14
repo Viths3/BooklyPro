@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Button } from './ui';
 export function ConfirmDialog({
   busy,
@@ -18,6 +18,7 @@ export function ConfirmDialog({
   closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
   useEffect(() => {
     const dialog = ref.current!;
     const previous = document.activeElement;
@@ -31,20 +32,20 @@ export function ConfirmDialog({
     <dialog
       className="confirm-dialog"
       ref={ref}
-      aria-labelledby="cancel-title"
-      aria-describedby="cancel-description"
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-description`}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
       }}
     >
-      <h2 id="cancel-title">{title}</h2>
-      <p id="cancel-description">{description}</p>
+      <h2 id={`${id}-title`}>{title}</h2>
+      <p id={`${id}-description`}>{description}</p>
       <div className="appointment-links">
         <Button variant="secondary" disabled={busy} onClick={onClose} autoFocus>
           {closeLabel}
         </Button>
-        <Button disabled={busy} onClick={onConfirm}>
+        <Button variant="danger" disabled={busy} onClick={onConfirm}>
           {busy ? 'Guardando…' : confirmLabel}
         </Button>
       </div>
