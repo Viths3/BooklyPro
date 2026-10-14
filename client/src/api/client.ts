@@ -33,7 +33,7 @@ export class ApiError extends Error {
   }
 }
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
@@ -114,6 +114,8 @@ export function errorMessage(error: unknown) {
       RATE_LIMITED:
         'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.',
       FORBIDDEN: 'No tienes permiso para acceder a esta información.',
+      CONFLICT:
+        'No se pudo aplicar el cambio. Comprueba que el negocio y los elementos relacionados estén activos y que el estado no haya cambiado.',
       BUSINESS_NOT_FOUND: 'Este negocio no está disponible.',
       APPOINTMENT_NOT_FOUND: 'Esta cita no está disponible.',
       INVALID_APPOINTMENT_STATUS_TRANSITION:
