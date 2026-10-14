@@ -1,3 +1,5 @@
+import { Select } from '../../components/common/Select';
+import { SuccessMessage } from '../../components/common/Feedback';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -13,6 +15,7 @@ import {
   Loading,
 } from '../../components/common/ui';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { StatusBadge } from '../../components/common/StatusBadge';
 import { useAuth } from '../auth/AuthProvider';
 import {
   appointmentDate,
@@ -115,39 +118,45 @@ export function OwnerAppointmentsPage() {
           {...register('date')}
           error={errors.date?.message}
         />
-        <label>
-          Estado
-          <select {...register('status')}>
-            <option value="">Todos</option>
-            {statuses.map((status) => (
-              <option key={status} value={status}>
-                {statusLabels[status]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Empleado
-          <select {...register('employeeId')}>
-            <option value="">Todos</option>
-            {employees.data?.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.firstName} {e.lastName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Servicio
-          <select {...register('serviceId')}>
-            <option value="">Todos</option>
-            {services.data?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          id="filter-status"
+          label="Estado"
+          {...register('status')}
+          error={errors.status?.message}
+        >
+          <option value="">Todos</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {statusLabels[status]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          id="filter-employeeId"
+          label="Empleado"
+          {...register('employeeId')}
+          error={errors.employeeId?.message}
+        >
+          <option value="">Todos</option>
+          {employees.data?.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.firstName} {e.lastName}
+            </option>
+          ))}
+        </Select>
+        <Select
+          id="filter-serviceId"
+          label="Servicio"
+          {...register('serviceId')}
+          error={errors.serviceId?.message}
+        >
+          <option value="">Todos</option>
+          {services.data?.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </Select>
         <Button type="submit">Filtrar</Button>
         <Button variant="secondary" onClick={() => setParams({})}>
           Limpiar filtros
@@ -155,6 +164,9 @@ export function OwnerAppointmentsPage() {
       </form>
       {(employees.error || services.error) && (
         <ErrorMessage error={employees.error || services.error} />
+      )}
+      {mutation.isSuccess && (
+        <SuccessMessage>Cambios guardados.</SuccessMessage>
       )}
       {mutation.error && (
         <>
@@ -182,7 +194,7 @@ export function OwnerAppointmentsPage() {
           ) : (
             query.data.data.map((a) => (
               <Card key={a.id}>
-                <span className="owner-state">{statusLabels[a.status]}</span>
+                <StatusBadge status={a.status} />
                 <h3>{a.service.name}</h3>
                 <p>
                   Cliente: {a.customer.firstName} {a.customer.lastName}

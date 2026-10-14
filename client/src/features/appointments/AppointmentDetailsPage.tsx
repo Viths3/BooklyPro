@@ -132,6 +132,12 @@ function AppointmentDetails({
         </p>
       )}
       <dl className="booking-summary appointment-section">
+        {appointment.priceAtBooking !== undefined && (
+          <div>
+            <dt>Importe reservado</dt>
+            <dd>{appointment.priceAtBooking}</dd>
+          </div>
+        )}
         <div>
           <dt>Negocio</dt>
           <dd>{business.name}</dd>

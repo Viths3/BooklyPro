@@ -11,7 +11,7 @@ export function Button({
   type = 'button',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger';
 }) {
   return (
     <button
@@ -28,7 +28,7 @@ export const Input = forwardRef<
     error?: string;
     hint?: string;
   }
->(function Input({ label, error, hint, id, ...props }, ref) {
+>(function Input({ label, error, hint, id, required, ...props }, ref) {
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
@@ -36,11 +36,23 @@ export const Input = forwardRef<
         {...props}
         id={id}
         ref={ref}
+        required={required}
+        aria-required={required || undefined}
         aria-invalid={Boolean(error)}
         aria-describedby={
-          error ? `${id}-error` : hint ? `${id}-hint` : undefined
+          [
+            error ? `${id}-error` : hint ? `${id}-hint` : '',
+            required ? `${id}-required` : '',
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined
         }
       />
+      {required && (
+        <small id={`${id}-required`} className="required-hint">
+          Obligatorio
+        </small>
+      )}
       {hint && !error && <small id={`${id}-hint`}>{hint}</small>}
       {error && (
         <span className="field-error" id={`${id}-error`}>
