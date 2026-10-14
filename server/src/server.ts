@@ -24,6 +24,8 @@ import { AuthService } from './services/auth.service.js';
 import { createAuthRouter } from './routes/auth.routes.js';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
+import { UploadService } from './services/upload.service.js';
+import { createUploadRouter } from './routes/upload.routes.js';
 import { prisma, checkDatabase } from './config/prisma.js';
 
 const auth = new AuthService(new AuthRepository(prisma));
@@ -36,6 +38,10 @@ const app = createApp(
   checkDatabase,
   {
     auth: createAuthRouter(auth),
+    uploads: createUploadRouter(
+      new UploadService(new BusinessRepository(prisma), env),
+      auth,
+    ),
     reviews: createReviewRouter(
       new ReviewService(new ReviewRepository(prisma)),
       auth,

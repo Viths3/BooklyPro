@@ -17,6 +17,7 @@ export function createApp(
     availability?: Router;
     appointments?: Router;
     reviews?: Router;
+    uploads?: Router;
   } = {},
   options: { corsOrigins?: string[]; trustProxyHops?: number } = {},
 ) {
@@ -35,6 +36,7 @@ export function createApp(
   );
   app.use(express.json({ limit: '100kb' }));
   if (routers.auth) app.use('/api/auth', routers.auth);
+  if (routers.uploads) app.use('/api', routers.uploads);
   if (routers.businesses) app.use('/api/businesses', routers.businesses);
   if (routers.services) app.use('/api', routers.services);
   if (routers.employees) app.use('/api', routers.employees);
