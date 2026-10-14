@@ -125,7 +125,7 @@ con refresh concurrente, logout y respuestas tardías.
 
 El hosting actual es Railway, con Root Directory `/client`, soporte SPA y
 `VITE_API_URL` definido durante el build. Se conserva el dominio autorizado en Vite:
-https://booklypro-web-production.up.railway.app. La API permanece en
+https://booklypro.up.railway.app. La API permanece en
 https://booklypro-back.up.railway.app con Root Directory `/server`.
 
 ## Booking flow
