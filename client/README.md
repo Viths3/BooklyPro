@@ -2,8 +2,8 @@
 
 Base React + Vite + TypeScript estricto. Tailwind CSS 4 usa `@tailwindcss/vite` y
 `@import 'tailwindcss'`. React Router gestiona rutas; TanStack Query cachea lecturas;
-React Hook Form y Zod validan formularios. No se utiliza un framework de servidor
-ni se despliega el frontend en esta feature.
+React Hook Form y Zod validan formularios. No se utiliza un framework de servidor.
+El frontend está desplegado en Railway; esta feature conserva su configuración.
 
 ## Inicio local
 
@@ -56,11 +56,18 @@ Se crearán carpetas adicionales por feature cuando tengan lógica propia, no
 directorios vacíos. Los estilos comunes definen la base visual sin un sistema de
 diseño excesivo. Se respetan navegación por teclado y reduced-motion.
 
+La interfaz utiliza Arial con fallback Helvetica Neue/sans-serif, sin cargar
+fuentes externas. Títulos y texto comparten la misma familia, con tamaños y pesos
+distintos. La paleta combina superficies blancas/grises con azul para acciones y
+selección. La portada ofrece búsqueda por nombre y accesos a citas y negocios;
+los paneles usan pestañas, formularios y controles de horario con el mismo estilo.
+La revisión visual se realiza en escritorio y móvil antes de publicar la rama.
+
 ## Rutas y datos
 
 Públicas: `/`, `/login`, `/register`, `/businesses`, `/businesses/:businessId`.
 Protegidas: `/dashboard`, `/dashboard/appointments`, `/dashboard/businesses`.
-Mis citas incluye historial y detalle; Mis negocios queda preparado para una feature posterior.
+Mis citas incluye historial y detalle; Mis negocios permite administrar negocios propios.
 
 El catálogo usa búsqueda por nombre y páginas de 9 negocios. El detalle carga
 servicios, empleados y las 5 reseñas más recientes solo tras comprobar el negocio.
@@ -116,8 +123,10 @@ CI instala con `npm ci` y ejecuta estos checks. Las pruebas cubren navegación,
 formularios, rutas protegidas, estados de consultas, detalle, errores y sesión
 con refresh concurrente, logout y respuestas tardías.
 
-No se configura hosting todavía. Cuando se despliegue una SPA, el hosting deberá
-reenviar rutas como `/businesses/:id` a `index.html` y definir VITE_API_URL en build.
+El hosting actual es Railway, con Root Directory `/client`, soporte SPA y
+`VITE_API_URL` definido durante el build. Se conserva el dominio autorizado en Vite:
+https://booklypro-web-production.up.railway.app. La API permanece en
+https://booklypro.up.railway.app con Root Directory `/server`.
 
 ## Booking flow
 
@@ -154,7 +163,7 @@ de negocio ofrecen mensajes legibles y los pasos permiten regresar para corregir
 
 Después del éxito, **Ver mis citas** dirige al dashboard del cliente. El historial,
 cancelación y reseñas ya están disponibles. No hay pagos,
-reprogramación ni administración del propietario en esta entrega.
+reprogramación. La administración del propietario se describe a continuación.
 
 ## Customer Dashboard
 
@@ -180,3 +189,80 @@ la relación existente en la consulta de detalle. Era necesario porque la API no
 ofrecía búsqueda de reseñas por cita; no se realizan consultas por cada tarjeta.
 Se preservan permisos y campos anteriores, sin cambios de schema ni migraciones.
 Las respuestas de listado, creación y cancelación conservan su contrato anterior.
+
+## Business Owner Dashboard
+
+La entrada es `/dashboard/businesses`. Las pantallas de cada negocio son:
+
+- `/dashboard/businesses/:businessId`: resumen, información, edición y desactivación.
+- `/dashboard/businesses/:businessId/services`: crear, editar, desactivar y reactivar servicios.
+- `/dashboard/businesses/:businessId/employees`: gestionar empleados y asignar/quitar servicios.
+- `/dashboard/businesses/:businessId/schedules`: editor semanal de negocio y empleados.
+- `/dashboard/businesses/:businessId/appointments`: reservas, filtros y cambios de estado.
+
+Las rutas reutilizan la sesión existente. Antes de montar una pantalla de gestión,
+`GET /api/businesses/me` verifica que el negocio está entre los del usuario.
+CUSTOMER puede crear su primer negocio; `GET /api/auth/me` actualiza la sesión tras
+la promoción del backend. Si esa consulta falla se permite reintentar la actualización
+sin repetir la creación. ADMIN también necesita ser propietario. El backend sigue
+siendo la autoridad para todas las operaciones. Los enlaces directos regresan al
+panel correspondiente tras login; recargar continúa cerrando la sesión en memoria.
+
+### APIs y contratos
+
+| Área         | Endpoints utilizados                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Negocios     | GET `/api/businesses/me`, POST `/api/businesses`, PATCH/DELETE `/api/businesses/:id`                                |
+| Servicios    | GET `/api/businesses/:id/services/manage`, POST `/api/businesses/:id/services`, PATCH/DELETE `/api/services/:id`    |
+| Empleados    | GET `/api/businesses/:id/employees/manage`, POST `/api/businesses/:id/employees`, PATCH/DELETE `/api/employees/:id` |
+| Asignaciones | POST/DELETE `/api/employees/:id/services/:serviceId`                                                                |
+| Horarios     | GET/PUT `/api/businesses/:id/schedules`, GET/PUT `/api/employees/:id/schedules`                                     |
+| Reservas     | GET `/api/businesses/:id/appointments`, PATCH `/api/appointments/:id/status`                                        |
+
+El detalle administrativo usa el registro obtenido de `/businesses/me`, porque el
+GET público de negocio oculta los inactivos. Las asignaciones se leen desde el
+listado administrativo de empleados: el GET público `/employees/:id/services`
+omite servicios inactivos y no es apropiado para quitar asignaciones antiguas.
+No se añaden APIs ni se cambian los permisos del backend. Se corrige un problema
+de integración: CORS ahora permite PUT para que el navegador pueda guardar horarios.
+Se mantienen los mismos orígenes autorizados y la política de credenciales.
+
+Los formularios usan React Hook Form y Zod y envían listas explícitas de campos.
+Los precios se conservan como strings decimales; solamente durationMinutes se
+convierte a entero. El precio histórico de una reserva se muestra tal como lo
+entrega la API, con la moneda del negocio.
+
+La semana completa se guarda con PUT (los PATCH por día siguen disponibles en la
+API). Horarios de negocio usan openingTime/closingTime; horarios de empleados usan
+startTime/endTime. Ambos usan HH:mm, días MONDAY–SUNDAY y active. El frontend valida
+formato y orden; el servidor comprueba cobertura y conflictos. Un 409 conserva el
+borrador y muestra un mensaje útil. No hay turnos nocturnos.
+
+Las reservas permiten fecha local del negocio, estado, empleado, servicio y
+paginación. Se muestran únicamente nombres del cliente, servicio, empleado,
+instantes en la zona del negocio, notas, estado y precio histórico. PENDING permite
+CONFIRMED/CANCELLED; CONFIRMED permite COMPLETED/CANCELLED/NO_SHOW. Los otros estados
+son terminales. Cancelar o marcar inasistencia requiere confirmación; un 409
+actualiza la lista para resolver cambios concurrentes.
+
+Las consultas privadas incluyen usuario, negocio, sección y filtros. Las mutations
+invalidan las listas afectadas, asignaciones, disponibilidad y catálogos públicos
+correspondientes, sin vaciar toda la caché. El resumen consulta conteos de servicios
+y empleados activos y dos páginas de una reserva futura (pendiente/confirmada)
+para obtener el total y la próxima cita sin descargar todo el historial.
+
+### Límites y producción
+
+- El backend no permite reactivar negocios; la interfaz lo indica antes de desactivar.
+- Un negocio inactivo no admite crear/editar servicios, empleados ni horarios.
+- Los GET públicos de horarios ocultan negocios/empleados inactivos. El editor se
+  bloquea en esos casos para no confundir un 404 con una semana vacía.
+- Employee representa personal del negocio, no una cuenta User.
+- No hay notificaciones, pagos, métricas financieras ni filtro de rango from/to en
+  esta interfaz; sí hay fecha exacta y las demás opciones indicadas.
+- No hay nuevas variables, migraciones, seed ni cambios de Railway o VITE_API_URL.
+  El backend debe incluir la corrección de CORS para PUT antes de publicar el panel.
+  Esta rama se publica para revisión y no se integra automáticamente en develop/main.
+
+Las pruebas en `src/test/owner-dashboard.test.tsx` cubren permisos, onboarding,
+CRUD, asignaciones, horarios, transiciones, conflictos e invalidación de listas.

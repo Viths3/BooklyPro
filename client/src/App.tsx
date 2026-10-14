@@ -6,7 +6,14 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage, RegisterPage } from './features/auth/AuthPages';
 import { BusinessesPage } from './features/businesses/BusinessesPage';
 import { BusinessDetailsPage } from './features/businesses/BusinessDetailsPage';
-import { DashboardPlaceholder } from './pages/DashboardPage';
+import {
+  BusinessList,
+  BusinessOverview,
+  OwnerBusinessLayout,
+} from './features/owner/BusinessPages';
+import { ServicesPage, EmployeesPage } from './features/owner/CatalogPages';
+import { SchedulesPage } from './features/owner/SchedulesPage';
+import { OwnerAppointmentsPage } from './features/owner/OwnerAppointmentsPage';
 import { CustomerOverview } from './features/appointments/CustomerOverview';
 import { AppointmentsPage } from './features/appointments/AppointmentsPage';
 import { AppointmentDetailsPage } from './features/appointments/AppointmentDetailsPage';
@@ -41,10 +48,17 @@ export function App() {
             path="appointments/:appointmentId"
             element={<AppointmentDetailsPage />}
           />
+          <Route path="businesses" element={<BusinessList />} />
           <Route
-            path="businesses"
-            element={<DashboardPlaceholder kind="businesses" />}
-          />
+            path="businesses/:businessId"
+            element={<OwnerBusinessLayout />}
+          >
+            <Route index element={<BusinessOverview />} />
+            <Route path="services" element={<ServicesPage />} />
+            <Route path="employees" element={<EmployeesPage />} />
+            <Route path="schedules" element={<SchedulesPage />} />
+            <Route path="appointments" element={<OwnerAppointmentsPage />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

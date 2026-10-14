@@ -17,17 +17,16 @@ function AuthAside() {
   return (
     <aside className="auth-aside">
       <p className="eyebrow">BOOKLYPRO</p>
-      <h2>
-        Un poco más
-        <br />
-        de tiempo.
-        <br />
-        <em>Para lo tuyo.</em>
-      </h2>
-      <p>Encuentra personas y servicios que hacen que tu día sea mejor.</p>
-      <span className="auth-flower" aria-hidden="true">
-        ✳
-      </span>
+      <h2>Tu agenda empieza aquí.</h2>
+      <p>
+        Reserva con los negocios que eliges y consulta tus citas desde tu
+        cuenta.
+      </p>
+      <ul className="auth-benefits">
+        <li>Horarios disponibles al reservar</li>
+        <li>Historial de citas y reseñas</li>
+        <li>Un panel para gestionar tu negocio</li>
+      </ul>
     </aside>
   );
 }
