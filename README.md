@@ -12,11 +12,11 @@ https://booklypro-web-production.up.railway.app
 
 API:
 
-https://booklypro.up.railway.app
+https://booklypro-back.up.railway.app
 
 Health check:
 
-https://booklypro.up.railway.app/api/health
+https://booklypro-back.up.railway.app/api/health
 
 Repositorio:
 
@@ -692,7 +692,7 @@ Errores de validación pueden incluir:
 Producción:
 
 ```http
-GET https://booklypro.up.railway.app/api/health
+GET https://booklypro-back.up.railway.app/api/health
 ```
 
 Respuesta:
@@ -729,7 +729,7 @@ Railway
 Backend:
 
 ```text
-https://booklypro.up.railway.app
+https://booklypro-back.up.railway.app
 ```
 
 Frontend:
@@ -758,7 +758,7 @@ Build: npm run build
 La URL de la API se configura mediante:
 
 ```env
-VITE_API_URL=https://booklypro.up.railway.app
+VITE_API_URL=https://booklypro-back.up.railway.app
 ```
 
 ---

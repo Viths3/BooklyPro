@@ -126,7 +126,7 @@ con refresh concurrente, logout y respuestas tardías.
 El hosting actual es Railway, con Root Directory `/client`, soporte SPA y
 `VITE_API_URL` definido durante el build. Se conserva el dominio autorizado en Vite:
 https://booklypro-web-production.up.railway.app. La API permanece en
-https://booklypro.up.railway.app con Root Directory `/server`.
+https://booklypro-back.up.railway.app con Root Directory `/server`.
 
 ## Booking flow
 
@@ -277,3 +277,41 @@ La reserva muestra las selecciones previas y el precio antes del resumen final.
 Las citas del cliente muestran `priceAtBooking` cuando está presente; la respuesta
 actual no incluye moneda, por lo que no se deduce USD ni otra moneda.
 Se mantienen rutas, lógica de reserva, sesión y contratos de backend.
+
+## Contact, schedule and booking UX
+
+Los formularios de negocio y empleado usan `PhoneInput`: Ecuador es el país inicial,
+pero el selector incluye los países de los metadatos de
+[libphonenumber-js](https://github.com/catamphetamine/libphonenumber-js). Se importa
+`libphonenumber-js/min` para evitar los metadatos completos; los nombres de países
+se obtienen con Intl.DisplayNames en español. No se añade un framework de formularios.
+
+Se aceptan espacios, paréntesis, guiones y un prefijo internacional único. Antes de
+la petición se comprueba la estructura y longitud posible para el país y se envía
+E.164 (por ejemplo +593987654321). No se comprueba que la línea exista o pertenezca
+al usuario, ni se afirma validación completa de las reglas de cada operador.
+Los países con prefijo compartido requieren seleccionar el país correspondiente.
+Los números no geográficos o antiguos que no se pueden interpretar se conservan
+sin modificación si no se editan; un cambio requiere corregir su formato.
+El teléfono sigue siendo opcional. País y número local son estado del formulario,
+no campos nuevos de la API. El registro User no admite teléfono y no se modifica.
+
+El editor semanal muestra Abierto/Disponible/Cerrado, limita la edición de horas
+al día activo y permite copiar el lunes a martes–viernes o cerrar toda la semana.
+Estas acciones solo cambian el borrador. Guardar semana usa el PUT existente.
+Al editar empleados se reutiliza la consulta del horario del negocio para mostrar
+su apertura y advertir intervalos fuera de ella o días cerrados. El backend sigue
+siendo la autoridad y un 409 conserva el borrador. Se mantienen los nombres
+openingTime/closingTime para negocios y startTime/endTime para empleados.
+
+La reserva indica el paso actual y el siguiente, conserva contexto de las
+selecciones, explica la zona horaria y permite volver directamente a elegir fecha
+cuando no hay disponibilidad. El resumen muestra inicio y fin; el fin proviene de
+la disponibilidad, no de un cálculo nuevo en el navegador. Los slots, query keys,
+control de doble envío, revalidación y tratamiento de conflictos se mantienen.
+
+No se requieren cambios de backend, schema, migraciones, CORS ni variables de
+entorno. La API de producción documentada es https://booklypro-back.up.railway.app;
+la aplicación sigue obteniendo su URL exclusivamente de VITE_API_URL.
+Esta rama incluye la pasada de UI/UX pendiente para reutilizar sus componentes;
+ambas deben revisarse antes de integrarlas en develop/main.
